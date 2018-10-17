@@ -4526,7 +4526,8 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <pad name="P$2" x="4.75" y="2.5" drill="0.55" shape="square"/>
 <pad name="P$1" x="7.25" y="2.5" drill="0.55" shape="square"/>
 <text x="0.05" y="4.97" size="1.778" layer="25">&gt;NAME</text>
-<rectangle x1="1.719834375" y1="1.958340625" x2="2.7813" y2="3.03250625" layer="52"/>
+<pad name="P$3" x="2.25" y="2.5" drill="0.55" shape="square"/>
+<rectangle x1="1.6" y1="1.9" x2="2.9" y2="3.1" layer="21"/>
 </package>
 </packages>
 <symbols>
@@ -4547,6 +4548,7 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="5.08" y1="0" x2="7.62" y2="0" width="0.1524" layer="94"/>
 <pin name="2" x="12.7" y="0" length="middle" rot="R180"/>
 <text x="0" y="2.54" size="1.778" layer="95">&gt;NAME</text>
+<pin name="3" x="12.7" y="-2.54" length="middle" rot="R180"/>
 </symbol>
 </symbols>
 <devicesets>
@@ -4559,6 +4561,7 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <connects>
 <connect gate="G$1" pin="1" pad="P$1"/>
 <connect gate="G$1" pin="2" pad="P$2"/>
+<connect gate="G$1" pin="3" pad="P$3"/>
 </connects>
 <technologies>
 <technology name=""/>
@@ -4603,7 +4606,6 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <sheet>
 <plain>
 <text x="208.28" y="259.08" size="2.54" layer="91">WHEATSTONE BRIDGE</text>
-<text x="233.68" y="-38.1" size="1.4224" layer="97">OP-AMP A OUTPUT</text>
 <text x="180.34" y="86.36" size="1.6764" layer="97">NODE A</text>
 <text x="167.64" y="200.66" size="3.81" layer="97">*DASH LINES REPERSENT SENSE LINES*</text>
 </plain>
@@ -4728,7 +4730,6 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="223.52" y1="-25.4" x2="177.8" y2="-25.4" width="0.1524" layer="91"/>
 <junction x="223.52" y="-25.4"/>
 <label x="160.02" y="-25.4" size="1.778" layer="95" rot="R180" xref="yes"/>
-<label x="223.52" y="-27.94" size="1.778" layer="95" rot="R270" xref="yes"/>
 <wire x1="281.94" y1="10.16" x2="271.78" y2="10.16" width="0.1524" layer="91" style="shortdash"/>
 <pinref part="WB_SENS2" gate="G$1" pin="3"/>
 <wire x1="203.2" y1="226.06" x2="213.36" y2="226.06" width="0.1524" layer="91" style="shortdash"/>
@@ -4883,32 +4884,24 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 </net>
 <net name="N$1" class="0">
 <segment>
-<wire x1="182.88" y1="25.4" x2="182.88" y2="20.32" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="182.88" y1="30.48" x2="182.88" y2="25.4" width="0.1524" layer="91"/>
 <pinref part="LONG_HW-" gate="G$1" pin="P$1"/>
 <pinref part="LONG_HW-" gate="G$1" pin="P$2"/>
 <wire x1="177.8" y1="30.48" x2="182.88" y2="30.48" width="0.1524" layer="91"/>
-<junction x="182.88" y="30.48"/>
 <pinref part="POT_LONG_HW" gate="G$1" pin="2"/>
 <wire x1="177.8" y1="30.48" x2="177.8" y2="12.7" width="0.1524" layer="91"/>
 <junction x="177.8" y="30.48"/>
 </segment>
 </net>
-<net name="N$8" class="0">
+<net name="N$7" class="0">
 <segment>
+<pinref part="SHORT_HW+" gate="G$1" pin="P$1"/>
 <pinref part="SHORT_HW+" gate="G$1" pin="P$2"/>
 <wire x1="182.88" y1="139.7" x2="182.88" y2="142.24" width="0.1524" layer="91"/>
-<junction x="182.88" y="142.24"/>
-<pinref part="SHORT_HW+" gate="G$1" pin="P$1"/>
-<wire x1="177.8" y1="142.24" x2="177.8" y2="139.7" width="0.1524" layer="91"/>
 <wire x1="177.8" y1="142.24" x2="182.88" y2="142.24" width="0.1524" layer="91"/>
-<wire x1="182.88" y1="142.24" x2="182.88" y2="144.78" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="182.88" y1="144.78" x2="200.66" y2="144.78" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="200.66" y1="144.78" x2="200.66" y2="132.08" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="200.66" y1="132.08" x2="213.36" y2="132.08" width="0.1524" layer="91" style="shortdash"/>
 <pinref part="POT_SHORT_HW" gate="G$1" pin="1"/>
 <wire x1="177.8" y1="152.4" x2="177.8" y2="142.24" width="0.1524" layer="91"/>
 <junction x="177.8" y="142.24"/>
+<wire x1="177.8" y1="142.24" x2="177.8" y2="139.7" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
