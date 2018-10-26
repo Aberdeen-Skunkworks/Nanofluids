@@ -6,9 +6,9 @@
 <setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="5" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="5" altunitdist="mil" altunit="mm"/>
+<grid distance="0.01" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="5" altunitdist="mil" altunit="mm"/>
 <layers>
-<layer number="1" name="Top" color="4" fill="1" visible="no" active="yes"/>
+<layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="2" name="Route2" color="16" fill="1" visible="yes" active="yes"/>
 <layer number="3" name="Route3" color="17" fill="1" visible="yes" active="yes"/>
 <layer number="4" name="Route4" color="18" fill="1" visible="no" active="no"/>
@@ -23,16 +23,16 @@
 <layer number="13" name="Route13" color="21" fill="1" visible="no" active="no"/>
 <layer number="14" name="Route14" color="22" fill="1" visible="no" active="no"/>
 <layer number="15" name="Route15" color="23" fill="1" visible="no" active="no"/>
-<layer number="16" name="Bottom" color="1" fill="1" visible="no" active="yes"/>
-<layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
+<layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
+<layer number="17" name="Pads" color="2" fill="1" visible="no" active="yes"/>
 <layer number="18" name="Vias" color="2" fill="1" visible="no" active="yes"/>
-<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="yes"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="yes"/>
 <layer number="20" name="Dimension" color="24" fill="1" visible="yes" active="yes"/>
-<layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="21" name="tPlace" color="7" fill="1" visible="no" active="yes"/>
 <layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="yes"/>
 <layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="yes"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
 <layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
 <layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
 <layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
@@ -46,14 +46,14 @@
 <layer number="36" name="bGlue" color="7" fill="5" visible="no" active="yes"/>
 <layer number="37" name="tTest" color="7" fill="1" visible="no" active="yes"/>
 <layer number="38" name="bTest" color="7" fill="1" visible="no" active="yes"/>
-<layer number="39" name="tKeepout" color="4" fill="11" visible="yes" active="yes"/>
+<layer number="39" name="tKeepout" color="4" fill="11" visible="no" active="yes"/>
 <layer number="40" name="bKeepout" color="1" fill="11" visible="no" active="yes"/>
-<layer number="41" name="tRestrict" color="4" fill="10" visible="yes" active="yes"/>
+<layer number="41" name="tRestrict" color="4" fill="10" visible="no" active="yes"/>
 <layer number="42" name="bRestrict" color="1" fill="10" visible="no" active="yes"/>
 <layer number="43" name="vRestrict" color="2" fill="10" visible="no" active="yes"/>
 <layer number="44" name="Drills" color="7" fill="1" visible="no" active="yes"/>
-<layer number="45" name="Holes" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="46" name="Milling" color="3" fill="1" visible="no" active="yes"/>
+<layer number="45" name="Holes" color="7" fill="1" visible="no" active="yes"/>
+<layer number="46" name="Milling" color="3" fill="1" visible="yes" active="yes"/>
 <layer number="47" name="Measures" color="7" fill="1" visible="no" active="yes"/>
 <layer number="48" name="Document" color="7" fill="1" visible="no" active="yes"/>
 <layer number="49" name="Reference" color="7" fill="1" visible="no" active="yes"/>
@@ -6155,13 +6155,13 @@ design rules under a new name.</description>
 <vertex x="17.2" y="174.99"/>
 </polygon>
 <polygon width="0.1524" layer="2">
-<vertex x="55.462" y="16.149"/>
-<vertex x="55.462" y="41.498"/>
-<vertex x="58.567" y="41.498"/>
+<vertex x="55.471" y="16.149"/>
+<vertex x="55.471" y="41.231"/>
+<vertex x="58.567" y="41.231"/>
 <vertex x="58.567" y="16.149"/>
 </polygon>
-<via x="43.02" y="24.46" extent="1-16" drill="0.35"/>
-<via x="57.02" y="38.951" extent="1-16" drill="0.35"/>
+<via x="43.02" y="24.46" extent="1-16" drill="0.3"/>
+<via x="57.02" y="38.951" extent="1-16" drill="0.3"/>
 <polygon width="0.1524" layer="2">
 <vertex x="55.5" y="16.5"/>
 <vertex x="53.5" y="16.5"/>
@@ -6171,14 +6171,14 @@ design rules under a new name.</description>
 <vertex x="60.5" y="16.5"/>
 </polygon>
 <polygon width="0.1524" layer="2">
-<vertex x="41.5" y="27"/>
+<vertex x="41.5" y="26.5"/>
 <vertex x="41.5" y="16.5"/>
 <vertex x="39.5" y="16.5"/>
 <vertex x="39.5" y="13.5"/>
 <vertex x="46.5" y="13.5"/>
 <vertex x="46.5" y="16.5"/>
 <vertex x="44.5" y="16.5"/>
-<vertex x="44.5" y="27"/>
+<vertex x="44.5" y="26.5"/>
 </polygon>
 <wire x1="57.02" y1="38.951" x2="43.56" y2="25.66" width="0" layer="19" extent="1-1"/>
 </signal>
@@ -6399,7 +6399,7 @@ design rules under a new name.</description>
 <wire x1="72.554" y1="184.65" x2="72.6134" y2="184.7094" width="1.016" layer="3"/>
 <wire x1="58.6505125" y1="160.4316" x2="52.2116" y2="160.4316" width="1.016" layer="3"/>
 <wire x1="75.7634" y1="177.5444875" x2="58.6505125" y2="160.4316" width="1.016" layer="3"/>
-<via x="57.02" y="103.638" extent="1-16" drill="0.35"/>
+<via x="57.02" y="103.638" extent="1-16" drill="0.3"/>
 <polygon width="0.1524" layer="2">
 <vertex x="58.5" y="101.5"/>
 <vertex x="55.5" y="101.5"/>
@@ -6426,7 +6426,7 @@ design rules under a new name.</description>
 <wire x1="75.1" y1="186.4" x2="71.6" y2="186.4" width="1.016" layer="3"/>
 <wire x1="71.6" y1="186.4" x2="70.524" y2="185.324" width="1.016" layer="3"/>
 <wire x1="70.524" y1="185.324" x2="70.524" y2="184.65" width="1.016" layer="3"/>
-<via x="43.02" y="118.138" extent="1-16" drill="0.35"/>
+<via x="43.02" y="118.138" extent="1-16" drill="0.3"/>
 <polygon width="0.1524" layer="2">
 <vertex x="46.5" y="126.5"/>
 <vertex x="44.5" y="126.5"/>
