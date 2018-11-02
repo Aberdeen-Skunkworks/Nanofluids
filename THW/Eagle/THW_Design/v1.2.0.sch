@@ -4777,9 +4777,9 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="198.12" y1="73.66" x2="213.36" y2="73.66" width="0.1524" layer="91" style="shortdash"/>
 </segment>
 <segment>
-<pinref part="WB_SENS2" gate="G$1" pin="7"/>
-<wire x1="213.36" y1="236.22" x2="203.2" y2="236.22" width="0.1524" layer="91" style="shortdash"/>
-<label x="203.2" y="236.22" size="2.1844" layer="95" rot="R180" xref="yes"/>
+<pinref part="WB_SENS2" gate="G$1" pin="8"/>
+<wire x1="236.22" y1="236.22" x2="243.84" y2="236.22" width="0.1524" layer="91" style="shortdash"/>
+<label x="243.84" y="236.22" size="2.1844" layer="95" xref="yes"/>
 </segment>
 </net>
 <net name="WB_CURRENT-" class="0">
@@ -4877,19 +4877,16 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <pinref part="PT$2" gate="G$1" pin="-"/>
 <pinref part="PT$3" gate="G$1" pin="+"/>
 <wire x1="144.78" y1="289.56" x2="165.1" y2="289.56" width="0.1524" layer="91"/>
-<wire x1="144.78" y1="289.56" x2="144.78" y2="309.88" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="144.78" y1="309.88" x2="193.04" y2="309.88" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="144.78" y1="289.56" x2="144.78" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
 <junction x="144.78" y="289.56"/>
-<pinref part="PT_SENS2" gate="G$1" pin="4"/>
-<wire x1="193.04" y1="309.88" x2="193.04" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="193.04" y1="330.2" x2="172.72" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="165.1" y1="289.56" x2="165.1" y2="302.26" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="165.1" y1="302.26" x2="149.86" y2="302.26" width="0.1524" layer="91" style="shortdash"/>
+<pinref part="PT_SENS2" gate="G$1" pin="3"/>
+<wire x1="144.78" y1="330.2" x2="149.86" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="165.1" y1="289.56" x2="165.1" y2="312.42" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="165.1" y1="312.42" x2="185.42" y2="312.42" width="0.1524" layer="91" style="shortdash"/>
 <junction x="165.1" y="289.56"/>
-<wire x1="149.86" y1="302.26" x2="147.32" y2="302.26" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="147.32" y1="302.26" x2="147.32" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
-<pinref part="PT_SENS2" gate="G$1" pin="5"/>
-<wire x1="147.32" y1="335.28" x2="149.86" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
+<pinref part="PT_SENS2" gate="G$1" pin="6"/>
+<wire x1="185.42" y1="312.42" x2="185.42" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="185.42" y1="335.28" x2="172.72" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
 </segment>
 </net>
 <net name="N$4" class="0">
@@ -4897,16 +4894,17 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <pinref part="PT$3" gate="G$1" pin="-"/>
 <pinref part="PT$4" gate="G$1" pin="+"/>
 <wire x1="190.5" y1="289.56" x2="210.82" y2="289.56" width="0.1524" layer="91"/>
-<pinref part="PT_SENS2" gate="G$1" pin="6"/>
-<wire x1="190.5" y1="289.56" x2="190.5" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="190.5" y1="335.28" x2="172.72" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
-<junction x="190.5" y="289.56"/>
 <wire x1="210.82" y1="289.56" x2="210.82" y2="365.76" width="0.1524" layer="91" style="shortdash"/>
-<wire x1="210.82" y1="365.76" x2="152.4" y2="365.76" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="210.82" y1="365.76" x2="149.86" y2="365.76" width="0.1524" layer="91" style="shortdash"/>
 <junction x="210.82" y="289.56"/>
 <pinref part="PT_SENS2" gate="G$1" pin="7"/>
-<wire x1="152.4" y1="365.76" x2="149.86" y2="365.76" width="0.1524" layer="91" style="shortdash"/>
 <wire x1="149.86" y1="365.76" x2="149.86" y2="340.36" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="190.5" y1="289.56" x2="190.5" y2="299.72" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="190.5" y1="299.72" x2="134.62" y2="299.72" width="0.1524" layer="91" style="shortdash"/>
+<junction x="190.5" y="289.56"/>
+<pinref part="PT_SENS2" gate="G$1" pin="5"/>
+<wire x1="134.62" y1="299.72" x2="134.62" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="134.62" y1="335.28" x2="149.86" y2="335.28" width="0.1524" layer="91" style="shortdash"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -4964,9 +4962,9 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <label x="243.84" y="231.14" size="2.1844" layer="95" xref="yes"/>
 </segment>
 <segment>
-<pinref part="WB_SENS2" gate="G$1" pin="8"/>
-<wire x1="236.22" y1="236.22" x2="243.84" y2="236.22" width="0.1524" layer="91" style="shortdash"/>
-<label x="243.84" y="236.22" size="2.1844" layer="95" xref="yes"/>
+<pinref part="WB_SENS2" gate="G$1" pin="7"/>
+<wire x1="213.36" y1="236.22" x2="203.2" y2="236.22" width="0.1524" layer="91" style="shortdash"/>
+<label x="203.2" y="236.22" size="2.1844" layer="95" rot="R180" xref="yes"/>
 </segment>
 </net>
 <net name="N$7" class="0">
@@ -4997,10 +4995,8 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 </net>
 <net name="N$9" class="0">
 <segment>
-<pinref part="PT_SENS2" gate="G$1" pin="3"/>
-<wire x1="119.38" y1="330.2" x2="149.86" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
 <pinref part="PT$2" gate="G$1" pin="+"/>
-<wire x1="119.38" y1="289.56" x2="119.38" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="119.38" y1="289.56" x2="119.38" y2="307.34" width="0.1524" layer="91" style="shortdash"/>
 <junction x="119.38" y="289.56"/>
 <pinref part="PT$1" gate="G$1" pin="-"/>
 <wire x1="106.68" y1="289.56" x2="119.38" y2="289.56" width="0.1524" layer="91"/>
@@ -5008,6 +5004,10 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="106.68" y1="289.56" x2="106.68" y2="325.12" width="0.1524" layer="91" style="shortdash"/>
 <wire x1="106.68" y1="325.12" x2="149.86" y2="325.12" width="0.1524" layer="91" style="shortdash"/>
 <junction x="106.68" y="289.56"/>
+<wire x1="119.38" y1="307.34" x2="180.34" y2="307.34" width="0.1524" layer="91" style="shortdash"/>
+<pinref part="PT_SENS2" gate="G$1" pin="4"/>
+<wire x1="180.34" y1="307.34" x2="180.34" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
+<wire x1="180.34" y1="330.2" x2="172.72" y2="330.2" width="0.1524" layer="91" style="shortdash"/>
 </segment>
 </net>
 </nets>
