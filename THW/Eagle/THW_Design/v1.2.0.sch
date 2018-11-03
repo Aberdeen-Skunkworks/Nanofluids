@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.2.0">
+<eagle version="9.1.3">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -4522,12 +4522,20 @@ Source: http://www.murata.com .. GRM43DR72E224KW01.pdf</description>
 <wire x1="0" y1="0" x2="0" y2="4.95" width="0.1524" layer="51"/>
 <wire x1="0" y1="4.95" x2="9.53" y2="4.95" width="0.1524" layer="51"/>
 <wire x1="9.53" y1="4.95" x2="9.53" y2="0" width="0.1524" layer="51"/>
-<circle x="7.95" y="1.267" radius="1.145" width="0.1524" layer="51"/>
+<circle x="7.95" y="1.267" radius="0.254" width="0.127" layer="51"/>
 <pad name="P$2" x="4.75" y="2.5" drill="0.55" shape="square"/>
 <pad name="P$1" x="7.25" y="2.5" drill="0.55" shape="square"/>
 <text x="0.05" y="4.97" size="1.778" layer="25">&gt;NAME</text>
 <pad name="P$3" x="2.25" y="2.5" drill="0.55" shape="square"/>
-<rectangle x1="1.6" y1="1.9" x2="2.9" y2="3.1" layer="21"/>
+<wire x1="3.302" y1="1.27" x2="1.27" y2="1.27" width="0.1524" layer="21"/>
+<wire x1="1.27" y1="1.27" x2="1.27" y2="3.81" width="0.1524" layer="21"/>
+<wire x1="1.27" y1="3.81" x2="3.302" y2="3.81" width="0.1524" layer="21"/>
+<wire x1="3.302" y1="3.81" x2="3.302" y2="1.27" width="0.1524" layer="21"/>
+<circle x="7.95" y="1.267" radius="0.254" width="0.127" layer="21"/>
+<wire x1="0" y1="0" x2="0" y2="4.953" width="0.1524" layer="21"/>
+<wire x1="0" y1="4.953" x2="9.525" y2="4.953" width="0.1524" layer="21"/>
+<wire x1="9.525" y1="4.953" x2="9.525" y2="0" width="0.1524" layer="21"/>
+<wire x1="9.525" y1="0" x2="0" y2="0" width="0.1524" layer="21"/>
 </package>
 </packages>
 <symbols>
