@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.1.3">
+<eagle version="9.2.2">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9,7 +9,7 @@
 <grid distance="0.5" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="5" altunitdist="mil" altunit="mm"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
-<layer number="2" name="Route2" color="16" fill="1" visible="no" active="yes"/>
+<layer number="2" name="Route2" color="16" fill="1" visible="yes" active="yes"/>
 <layer number="3" name="Route3" color="17" fill="1" visible="yes" active="yes"/>
 <layer number="4" name="Route4" color="18" fill="1" visible="no" active="no"/>
 <layer number="5" name="Route5" color="19" fill="1" visible="no" active="no"/>
@@ -23,19 +23,19 @@
 <layer number="13" name="Route13" color="21" fill="1" visible="no" active="no"/>
 <layer number="14" name="Route14" color="22" fill="1" visible="no" active="no"/>
 <layer number="15" name="Route15" color="23" fill="1" visible="no" active="no"/>
-<layer number="16" name="Bottom" color="1" fill="1" visible="no" active="yes"/>
+<layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
 <layer number="17" name="Pads" color="2" fill="1" visible="yes" active="yes"/>
 <layer number="18" name="Vias" color="2" fill="1" visible="yes" active="yes"/>
-<layer number="19" name="Unrouted" color="6" fill="1" visible="no" active="yes"/>
-<layer number="20" name="Dimension" color="24" fill="1" visible="no" active="yes"/>
+<layer number="19" name="Unrouted" color="6" fill="1" visible="yes" active="yes"/>
+<layer number="20" name="Dimension" color="24" fill="1" visible="yes" active="yes"/>
 <layer number="21" name="tPlace" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="22" name="bPlace" color="7" fill="1" visible="no" active="yes"/>
-<layer number="23" name="tOrigins" color="15" fill="1" visible="no" active="yes"/>
-<layer number="24" name="bOrigins" color="15" fill="1" visible="no" active="yes"/>
-<layer number="25" name="tNames" color="7" fill="1" visible="no" active="yes"/>
-<layer number="26" name="bNames" color="7" fill="1" visible="no" active="yes"/>
-<layer number="27" name="tValues" color="7" fill="1" visible="no" active="yes"/>
-<layer number="28" name="bValues" color="7" fill="1" visible="no" active="yes"/>
+<layer number="22" name="bPlace" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="23" name="tOrigins" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="24" name="bOrigins" color="15" fill="1" visible="yes" active="yes"/>
+<layer number="25" name="tNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="26" name="bNames" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="27" name="tValues" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="28" name="bValues" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="29" name="tStop" color="7" fill="3" visible="no" active="yes"/>
 <layer number="30" name="bStop" color="7" fill="6" visible="no" active="yes"/>
 <layer number="31" name="tCream" color="7" fill="4" visible="no" active="yes"/>
@@ -46,19 +46,19 @@
 <layer number="36" name="bGlue" color="7" fill="5" visible="no" active="yes"/>
 <layer number="37" name="tTest" color="7" fill="1" visible="no" active="yes"/>
 <layer number="38" name="bTest" color="7" fill="1" visible="no" active="yes"/>
-<layer number="39" name="tKeepout" color="4" fill="11" visible="no" active="yes"/>
-<layer number="40" name="bKeepout" color="1" fill="11" visible="no" active="yes"/>
-<layer number="41" name="tRestrict" color="4" fill="10" visible="no" active="yes"/>
-<layer number="42" name="bRestrict" color="1" fill="10" visible="no" active="yes"/>
+<layer number="39" name="tKeepout" color="4" fill="11" visible="yes" active="yes"/>
+<layer number="40" name="bKeepout" color="1" fill="11" visible="yes" active="yes"/>
+<layer number="41" name="tRestrict" color="4" fill="10" visible="yes" active="yes"/>
+<layer number="42" name="bRestrict" color="1" fill="10" visible="yes" active="yes"/>
 <layer number="43" name="vRestrict" color="2" fill="10" visible="no" active="yes"/>
-<layer number="44" name="Drills" color="7" fill="1" visible="no" active="yes"/>
-<layer number="45" name="Holes" color="7" fill="1" visible="no" active="yes"/>
+<layer number="44" name="Drills" color="7" fill="1" visible="yes" active="yes"/>
+<layer number="45" name="Holes" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="46" name="Milling" color="3" fill="1" visible="no" active="yes"/>
 <layer number="47" name="Measures" color="7" fill="1" visible="no" active="yes"/>
 <layer number="48" name="Document" color="7" fill="1" visible="no" active="yes"/>
 <layer number="49" name="Reference" color="7" fill="1" visible="no" active="yes"/>
 <layer number="51" name="tDocu" color="7" fill="1" visible="yes" active="yes"/>
-<layer number="52" name="bDocu" color="7" fill="1" visible="no" active="yes"/>
+<layer number="52" name="bDocu" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="88" name="SimResults" color="9" fill="1" visible="no" active="no"/>
 <layer number="89" name="SimProbes" color="9" fill="1" visible="no" active="no"/>
 <layer number="90" name="Modules" color="5" fill="1" visible="no" active="no"/>
@@ -6082,88 +6082,88 @@ design rules under a new name.</description>
 </pass>
 </autorouter>
 <elements>
-<element name="R_CURRENT" library="resistor" library_urn="urn:adsk.eagle:library:348" package="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="" x="36.471" y="172.744" rot="R270">
+<element name="R_CURRENT" library="resistor" library_urn="urn:adsk.eagle:library:348" package="M0805" package3d_urn="urn:adsk.eagle:package:26079/1" value="100" x="36.471" y="172.744" smashed="yes" rot="R270">
 <attribute name="NAME" x="37.741" y="174.014" size="1.27" layer="25" rot="R270"/>
 <attribute name="VALUE" x="33.931" y="174.014" size="1.27" layer="27" rot="R270"/>
 </element>
-<element name="LONG_HW+" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="57.02" y="40.151">
+<element name="LONG_HW+" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="57.02" y="40.151" smashed="yes">
 <attribute name="NAME" x="54.185" y="37.572" size="1.27" layer="25"/>
 </element>
-<element name="LONG_HW-" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="57.02" y="102.438" rot="R180">
+<element name="LONG_HW-" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="57.02" y="102.438" smashed="yes" rot="R180">
 <attribute name="NAME" x="59.855" y="105.017" size="1.27" layer="25" rot="R180"/>
 </element>
-<element name="SHORT_HW-" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="43.02" y="25.66">
+<element name="SHORT_HW-" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="43.02" y="25.66" smashed="yes">
 <attribute name="NAME" x="40.185" y="23.081" size="1.27" layer="25"/>
 </element>
-<element name="SHORT_HW+" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="43.02" y="116.938" rot="R180">
+<element name="SHORT_HW+" library="WIREPOINT" package="WIREPOINT" value="WIREPOINT_1A" x="43.02" y="116.938" smashed="yes" rot="R180">
 <attribute name="NAME" x="45.855" y="119.517" size="1.27" layer="25" rot="R180"/>
 </element>
-<element name="WB_SENS2" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="77.954" y="199.89" rot="R180">
+<element name="WB_SENS2" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="77.954" y="199.89" smashed="yes" rot="R180">
 <attribute name="NAME" x="72.684" y="202.51" size="1.27" layer="25" rot="R180"/>
 <attribute name="VALUE" x="72.734" y="177.03" size="1.27" layer="27" rot="R180"/>
 </element>
-<element name="WB_SENS1" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="38.189" y="199.858" rot="R180">
+<element name="WB_SENS1" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="38.189" y="199.858" smashed="yes" rot="R180">
 <attribute name="NAME" x="32.919" y="202.478" size="1.27" layer="25" rot="R180"/>
 <attribute name="VALUE" x="32.969" y="176.998" size="1.27" layer="27" rot="R180"/>
 </element>
-<element name="POWER" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="58.163" y="199.935" rot="R180">
+<element name="POWER" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="58.163" y="199.935" smashed="yes" rot="R180">
 <attribute name="NAME" x="52.893" y="202.555" size="1.27" layer="25" rot="R180"/>
 <attribute name="VALUE" x="52.943" y="177.075" size="1.27" layer="27" rot="R180"/>
 </element>
-<element name="PT_SENS1" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="18.23" y="199.93" rot="R180">
+<element name="PT_SENS1" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="18.23" y="199.93" smashed="yes" rot="R180">
 <attribute name="NAME" x="12.96" y="202.55" size="1.27" layer="25" rot="R180"/>
 <attribute name="VALUE" x="13.01" y="177.07" size="1.27" layer="27" rot="R180"/>
 </element>
-<element name="PT_SENS2" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="97.93" y="199.95" rot="R180">
+<element name="PT_SENS2" library="RJ45_CONNECTOR" package="RJ45_CONNNECTOR" value="RJ45_CONNECTOR" x="97.93" y="199.95" smashed="yes" rot="R180">
 <attribute name="NAME" x="92.66" y="202.57" size="1.27" layer="25" rot="R180"/>
 <attribute name="VALUE" x="92.71" y="177.09" size="1.27" layer="27" rot="R180"/>
 </element>
-<element name="PT$1" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="50" y="127.7" rot="R180">
+<element name="PT$1" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="50" y="127.7" smashed="yes" rot="R180">
 <attribute name="NAME" x="52.146" y="125.792" size="0.8" layer="25" rot="R180"/>
 <attribute name="VALUE" x="52.1" y="129.394" size="0.8" layer="27" rot="R180" align="top-left"/>
 </element>
-<element name="PT$2" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="75.09" y="103.06" rot="R90">
+<element name="PT$2" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="75.09" y="103.06" smashed="yes" rot="R90">
 <attribute name="NAME" x="73.182" y="100.914" size="0.8" layer="25" rot="R90"/>
 <attribute name="VALUE" x="76.784" y="100.96" size="0.8" layer="27" rot="R90" align="top-left"/>
 </element>
-<element name="PT$3" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="75.1" y="61.06" rot="MR90">
+<element name="PT$3" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="75.1" y="61.06" smashed="yes" rot="MR90">
 <attribute name="NAME" x="77.008" y="58.914" size="0.8" layer="26" rot="MR90"/>
 <attribute name="VALUE" x="73.406" y="58.96" size="0.8" layer="28" rot="MR90" align="top-left"/>
 </element>
-<element name="PT$4" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="50" y="15.3" rot="MR180">
+<element name="PT$4" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="50" y="15.3" smashed="yes" rot="MR180">
 <attribute name="NAME" x="47.854" y="13.392" size="0.8" layer="26" rot="MR180"/>
 <attribute name="VALUE" x="47.9" y="16.994" size="0.8" layer="28" rot="MR180" align="top-left"/>
 </element>
-<element name="PT$5" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="24.9" y="40.06" rot="R270">
+<element name="PT$5" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="24.9" y="40.06" smashed="yes" rot="R270">
 <attribute name="NAME" x="26.808" y="42.206" size="0.8" layer="25" rot="R270"/>
 <attribute name="VALUE" x="23.206" y="42.16" size="0.8" layer="27" rot="R270" align="top-left"/>
 </element>
-<element name="PT$6" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="24.9" y="82.06" rot="MR270">
+<element name="PT$6" library="PTS1206" package="CAPMP3216X166" value="PTS1206A" x="24.9" y="82.06" smashed="yes" rot="MR270">
 <attribute name="NAME" x="22.992" y="84.206" size="0.8" layer="26" rot="MR270"/>
 <attribute name="VALUE" x="26.594" y="84.16" size="0.8" layer="28" rot="MR270" align="top-left"/>
 </element>
-<element name="POT_1" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="44.42" y="165.15" rot="R270">
+<element name="POT_1" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="44.42" y="165.15" smashed="yes" rot="R270">
 <attribute name="NAME" x="49.39" y="165.1" size="1.778" layer="25" rot="R270"/>
 </element>
-<element name="POT_2" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="54.68" y="155.65" rot="R90">
+<element name="POT_2" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="54.68" y="155.65" smashed="yes" rot="R90">
 <attribute name="NAME" x="49.71" y="155.7" size="1.778" layer="25" rot="R90"/>
 </element>
-<element name="POT_3" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="49.38" y="165.55" rot="R90">
+<element name="POT_3" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="49.38" y="165.55" smashed="yes" rot="R90">
 <attribute name="NAME" x="44.41" y="165.6" size="1.778" layer="25" rot="R90"/>
 </element>
-<element name="POT_4" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="49.71" y="175.09" rot="R270">
+<element name="POT_4" library="POTENTIOMETER_67WR200LFR" package="67WR200LF" value="67WR200LFR$1" x="49.71" y="175.09" smashed="yes" rot="R270">
 <attribute name="NAME" x="54.68" y="175.04" size="1.778" layer="25" rot="R270"/>
 </element>
-<element name="U$1" library="AD_LOGO" package="AD_LOGO" value="" x="17.272" y="144.018"/>
-<element name="PAD1" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="14" y="161">
-<attribute name="NAME" x="12.857" y="162.397" size="1.27" layer="25" ratio="10"/>
-<attribute name="VALUE" x="14" y="162" size="0.0254" layer="27"/>
+<element name="U$1" library="AD_LOGO" package="AD_LOGO" value="" x="17.272" y="144.018" smashed="yes"/>
+<element name="PAD1" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="17" y="161" smashed="yes">
+<attribute name="NAME" x="15.857" y="162.397" size="1.27" layer="25" ratio="10"/>
+<attribute name="VALUE" x="17" y="162" size="0.0254" layer="27"/>
 </element>
-<element name="PAD2" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="42.545" y="153.734">
+<element name="PAD2" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="42.545" y="153.734" smashed="yes">
 <attribute name="NAME" x="41.402" y="155.131" size="1.27" layer="25" ratio="10"/>
 <attribute name="VALUE" x="42.545" y="154.734" size="0.0254" layer="27"/>
 </element>
-<element name="PAD3" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="56.289" y="153.731">
+<element name="PAD3" library="wirepad" library_urn="urn:adsk.eagle:library:412" package="2,15/1,0" package3d_urn="urn:adsk.eagle:package:30831/1" value="" x="56.289" y="153.731" smashed="yes">
 <attribute name="NAME" x="55.146" y="155.128" size="1.27" layer="25" ratio="10"/>
 <attribute name="VALUE" x="56.289" y="154.731" size="0.0254" layer="27"/>
 </element>
@@ -6249,13 +6249,14 @@ design rules under a new name.</description>
 <via x="43.02" y="24.46" extent="1-16" drill="0.35"/>
 <via x="57.02" y="38.951" extent="1-16" drill="0.35"/>
 <polygon width="0.1524" layer="2">
-<vertex x="15" y="199.176"/>
-<vertex x="15" y="181.483"/>
-<vertex x="0.762" y="181.483"/>
-<vertex x="0.762" y="0.43979375"/>
-<vertex x="5.64388125" y="0.43979375"/>
-<vertex x="5.6440875" y="0.44"/>
-<vertex x="59.5" y="0.44"/>
+<vertex x="21.0401875" y="187.5402"/>
+<vertex x="16.010290625" y="182.510303125"/>
+<vertex x="16.142028125" y="150.642028125"/>
+<vertex x="13" y="147.5"/>
+<vertex x="13" y="18.0840875"/>
+<vertex x="26.629765625" y="4.454321875"/>
+<vertex x="52.503834375" y="4.503834375"/>
+<vertex x="59.5" y="11.5"/>
 <vertex x="59.5" y="16.5"/>
 <vertex x="58.5" y="16.5"/>
 <vertex x="58.5" y="41.5"/>
@@ -6277,9 +6278,8 @@ design rules under a new name.</description>
 <vertex x="23.46914375" y="126.46914375"/>
 <vertex x="26" y="129"/>
 <vertex x="25.990175" y="185.750175"/>
-<vertex x="31.690175" y="185.750175"/>
-<vertex x="31.81" y="185.87"/>
-<vertex x="31.81" y="199.176"/>
+<vertex x="32.190175" y="185.750175"/>
+<vertex x="32.190175" y="187.687640625"/>
 </polygon>
 <contactref element="WB_SENS1" pad="2"/>
 <contactref element="WB_SENS1" pad="6"/>
@@ -6398,7 +6398,6 @@ design rules under a new name.</description>
 <wire x1="75.09" y1="101.76" x2="75.09" y2="62.37" width="2" layer="2"/>
 <wire x1="75.1" y1="62.36" x2="75.09" y2="62.37" width="2" layer="2"/>
 <via x="75.1" y="62.36" extent="1-16" drill="0.35"/>
-<wire x1="75.09" y1="101.76" x2="75.3381625" y2="101.76" width="1.016" layer="2"/>
 <wire x1="82.026" y1="153.586" x2="82.026" y2="66.665" width="1.016" layer="3"/>
 <wire x1="82.026" y1="66.665" x2="77.721" y2="62.36" width="1.016" layer="3"/>
 <wire x1="77.721" y1="62.36" x2="75.1" y2="62.36" width="1.016" layer="3"/>
@@ -6615,14 +6614,6 @@ design rules under a new name.</description>
 <wire x1="87.23" y1="187.14" x2="88.47" y2="185.9" width="1.016" layer="2"/>
 <wire x1="88.47" y1="185.9" x2="88.47" y2="184.71" width="1.016" layer="2"/>
 </signal>
-<signal name="BSHEILD">
-<polygon width="0.01" layer="16" rank="3">
-<vertex x="0" y="0"/>
-<vertex x="0" y="200"/>
-<vertex x="100" y="200"/>
-<vertex x="100" y="0"/>
-</polygon>
-</signal>
 <signal name="N$244">
 </signal>
 <signal name="N$245">
@@ -6648,7 +6639,30 @@ design rules under a new name.</description>
 <via x="4" y="196" extent="1-16" drill="0.35"/>
 <via x="12" y="164" extent="1-16" drill="0.35"/>
 <via x="32" y="168" extent="1-16" drill="0.35"/>
-<wire x1="12" y1="164" x2="32" y2="168" width="0" layer="19" extent="1-1"/>
+<polygon width="0.01" layer="16" rank="3">
+<vertex x="0" y="0"/>
+<vertex x="0" y="200"/>
+<vertex x="100" y="200"/>
+<vertex x="100" y="0"/>
+</polygon>
+<via x="8" y="192" extent="1-16" drill="0.35"/>
+<via x="12" y="196" extent="1-16" drill="0.35"/>
+<via x="16" y="192" extent="1-16" drill="0.35"/>
+<via x="20" y="188" extent="1-16" drill="0.35"/>
+<via x="12" y="188" extent="1-16" drill="0.35"/>
+<via x="20" y="196" extent="1-16" drill="0.35"/>
+<via x="24" y="192" extent="1-16" drill="0.35"/>
+<via x="28" y="196" extent="1-16" drill="0.35"/>
+<via x="28" y="189.5" extent="1-16" drill="0.35"/>
+<via x="20" y="48" extent="1-16" drill="0.35"/>
+<via x="20" y="56" extent="1-16" drill="0.35"/>
+<via x="12" y="52" extent="1-16" drill="0.35"/>
+<via x="4" y="48" extent="1-16" drill="0.35"/>
+<via x="12" y="44" extent="1-16" drill="0.35"/>
+<via x="4" y="40" extent="1-16" drill="0.35"/>
+<via x="20" y="40" extent="1-16" drill="0.35"/>
+<via x="72" y="8" extent="1-16" drill="0.35"/>
+<via x="72" y="4" extent="1-16" drill="0.35"/>
 </signal>
 <signal name="N$10">
 <via x="4" y="176" extent="1-16" drill="0.35"/>
@@ -6695,12 +6709,6 @@ design rules under a new name.</description>
 <signal name="N$22">
 <via x="4" y="60" extent="1-16" drill="0.35"/>
 </signal>
-<signal name="N$23">
-<via x="4" y="48" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$24">
-<via x="4" y="40" extent="1-16" drill="0.35"/>
-</signal>
 <signal name="N$25">
 <via x="4" y="32" extent="1-16" drill="0.35"/>
 </signal>
@@ -6724,12 +6732,6 @@ design rules under a new name.</description>
 </signal>
 <signal name="N$32">
 <via x="12" y="32" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$33">
-<via x="12" y="44" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$34">
-<via x="12" y="52" extent="1-16" drill="0.35"/>
 </signal>
 <signal name="N$35">
 <via x="12" y="60" extent="1-16" drill="0.35"/>
@@ -6770,18 +6772,6 @@ design rules under a new name.</description>
 <signal name="N$48">
 <via x="12" y="180" extent="1-16" drill="0.35"/>
 </signal>
-<signal name="N$49">
-<via x="12" y="188" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$50">
-<via x="12" y="196" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$51">
-<via x="20" y="196" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$52">
-<via x="20" y="188" extent="1-16" drill="0.35"/>
-</signal>
 <signal name="N$53">
 <via x="24" y="180" extent="1-16" drill="0.35"/>
 </signal>
@@ -6808,12 +6798,6 @@ design rules under a new name.</description>
 </signal>
 <signal name="N$62">
 <via x="32" y="152" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$63">
-<via x="28" y="196" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$64">
-<via x="28" y="189.5" extent="1-16" drill="0.35"/>
 </signal>
 <signal name="N$67">
 <via x="52" y="196" extent="1-16" drill="0.35"/>
@@ -6878,15 +6862,6 @@ design rules under a new name.</description>
 <signal name="N$87">
 <via x="40" y="188" extent="1-16" drill="0.35"/>
 </signal>
-<signal name="N$88">
-<via x="24" y="192" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$89">
-<via x="16" y="192" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$90">
-<via x="8" y="192" extent="1-16" drill="0.35"/>
-</signal>
 <signal name="N$65">
 <via x="20" y="176" extent="1-16" drill="0.35"/>
 </signal>
@@ -6931,15 +6906,6 @@ design rules under a new name.</description>
 </signal>
 <signal name="N$103">
 <via x="20" y="64" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$104">
-<via x="20" y="56" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$105">
-<via x="20" y="48" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$106">
-<via x="20" y="40" extent="1-16" drill="0.35"/>
 </signal>
 <signal name="N$107">
 <via x="20" y="32" extent="1-16" drill="0.35"/>
@@ -7070,14 +7036,8 @@ design rules under a new name.</description>
 <signal name="N$149">
 <via x="64" y="4" extent="1-16" drill="0.35"/>
 </signal>
-<signal name="N$150">
-<via x="72" y="8" extent="1-16" drill="0.35"/>
-</signal>
 <signal name="N$151">
 <via x="88" y="12" extent="1-16" drill="0.35"/>
-</signal>
-<signal name="N$152">
-<via x="72" y="4" extent="1-16" drill="0.35"/>
 </signal>
 <signal name="N$153">
 <via x="64" y="8" extent="1-16" drill="0.35"/>
