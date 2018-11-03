@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.1.3">
+<eagle version="9.2.2">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -6252,18 +6252,15 @@ design rules under a new name.</description>
 <contactref element="WB_SENS1" pad="2"/>
 <contactref element="WB_SENS1" pad="6"/>
 <wire x1="30.759" y1="184.695" x2="30.759" y2="185.903" width="2" layer="2"/>
-<wire x1="29.948" y1="186.714" x2="24" y2="186.714" width="2" layer="2"/>
 <wire x1="30.759" y1="185.903" x2="29.948" y2="186.714" width="2" layer="2"/>
 <wire x1="26.699" y1="184.695" x2="24" y2="184.695" width="2" layer="2"/>
-<wire x1="24" y1="184.695" x2="24" y2="184" width="2" layer="2"/>
 <contactref element="WB_SENS2" pad="8"/>
 <wire x1="74.60895625" y1="184.895" x2="72.754" y2="184.895" width="2" layer="2"/>
 <wire x1="72.754" y1="184.895" x2="72.554" y2="184.695" width="2" layer="2"/>
 <wire x1="78.5306" y1="180.97335625" x2="74.60895625" y2="184.895" width="2" layer="2"/>
 <wire x1="78.5306" y1="106.047" x2="78.5306" y2="180.97335625" width="2" layer="2"/>
-<wire x1="61.722" y1="12.573" x2="58.928" y2="15.367" width="2" layer="2"/>
-<wire x1="73.573" y1="12.573" x2="78.548" y2="17.548" width="2" layer="2"/>
-<wire x1="73.573" y1="12.573" x2="61.722" y2="12.573" width="2" layer="2"/>
+<wire x1="73.64" y1="12.64" x2="78.548" y2="17.548" width="2" layer="2"/>
+<wire x1="73.64" y1="12.64" x2="58.750003125" y2="12.64" width="2" layer="2"/>
 <wire x1="78.548" y1="106.0296" x2="78.5306" y2="106.047" width="2" layer="2"/>
 <wire x1="78.548" y1="17.548" x2="78.548" y2="106.0296" width="2" layer="2"/>
 <contactref element="PAD1" pad="1"/>
@@ -6572,10 +6569,9 @@ design rules under a new name.</description>
 <contactref element="WB_SENS1" pad="1"/>
 <wire x1="76.731" y1="187.277" x2="70.056" y2="187.277" width="1.016" layer="3"/>
 <wire x1="27.719" y1="182.665" x2="27.719" y2="146.71128125" width="2" layer="2"/>
-<wire x1="38.851" y1="127.381" x2="36.254" y2="129.978" width="2" layer="2"/>
+<wire x1="40.201" y1="127.471" x2="36.254" y2="131.418" width="2" layer="2"/>
 <wire x1="27.719" y1="146.71128125" x2="36.254" y2="138.17628125" width="2" layer="2"/>
-<wire x1="36.254" y1="138.17628125" x2="36.254" y2="129.978" width="2" layer="2"/>
-<wire x1="42.851" y1="127.381" x2="38.851" y2="127.381" width="2" layer="2"/>
+<wire x1="36.254" y1="138.17628125" x2="36.254" y2="131.418" width="2" layer="2"/>
 <contactref element="WB_SENS2" pad="4"/>
 <wire x1="70.056" y1="187.277" x2="68.494" y2="185.715" width="1.016" layer="3"/>
 <wire x1="68.494" y1="185.715" x2="68.494" y2="184.695" width="1.016" layer="3"/>

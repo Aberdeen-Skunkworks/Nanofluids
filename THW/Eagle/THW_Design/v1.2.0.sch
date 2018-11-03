@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.1.3">
+<eagle version="9.2.2">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -4962,6 +4962,7 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="170.18" y1="63.5" x2="177.8" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="170.18" y1="60.96" x2="170.18" y2="63.5" width="0.1524" layer="91"/>
 <junction x="170.18" y="63.5"/>
+<junction x="177.8" y="83.82"/>
 </segment>
 <segment>
 <pinref part="WB_SENS2" gate="G$1" pin="8"/>
