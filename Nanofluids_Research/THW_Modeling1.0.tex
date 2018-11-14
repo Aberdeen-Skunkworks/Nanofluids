@@ -1,0 +1,80 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{siunitx}
+\usepackage{soul}
+\usepackage{color}
+%cover page
+\author{Asad Mohiuddin}
+\title{THW Modelling v1.0}
+
+
+\begin{document}
+\setlength{\parindent}{0pt}
+%title page
+\clearpage \maketitle
+\thispagestyle{empty} %pervent page numbering
+
+%start
+\newpage \setcounter{page}{1}
+\section{Ideal Analytical Model}
+To start the simplest model we apply the following assumptions:
+	\begin{itemize}
+		\item{The thermo-physical properties of the medium are always constant.}
+		\item{Hot wire has negligible heat capacity and a large thermal conductivity.}
+		\item{No thermal resistance exists between the contact of the medium and surface of the hot wire.} 
+		\item{Pure conductive heat transfer from an infinity long wire that has a  infinitely thin radius to an infinite medium.}
+	\end{itemize}
+
+Primarily there is heat transfer to the medium where the temperature of the hot wire varies with time. The heat transfer can be treated as a boundary condition as we are relative to the medium. The basic problem is driven by the non-stationary heat diffusion of Fourier's law
+
+$$\rho C_p \frac{\partial T}{\partial t} = \lambda \nabla^2T $$
+ \begin{itemize}
+ 	\item[] $\lambda$ is the thermal conductivity of the medium
+ 	\item[] $\rho$ is the density of the medium
+ 	\item[] $C_p$ is the specific heat capacity of the medium
+ \end{itemize}
+
+Substituting in for the constants
+
+$$ \frac{\partial T}{\partial t} = \alpha \nabla^2T $$
+
+Where $\alpha = \frac{\lambda}{\rho C_p}$ the thermal diffusivity of the medium. The ability of the medium to conduct thermal energy, relative to its ability to store it.
+
+\subsection{Boundary conditions}
+\textbf{(1)} For any radial distance $r$ at $t \leq 0$ 
+$$\Delta T_{ideal} (r, t) = 0$$
+This boundary condition states that at the start the wire is in thermal equilibrium with the surrounding medium.
+
+\vspace{3mm}
+
+\textbf{(2)} At $r = 0 $ and $t \geq 0$
+$$ \displaystyle \lim_{r\to \infty} \left(r \frac{\delta T}{\delta r} \right) = -\frac{q}{2 \pi \lambda}$$
+\hl{This describes the radial temperature distribution as we get closer to the wire.}
+
+\newpage
+
+\textbf{(3)} At $r = \infty$ and $t \geq 0$ 
+$$\displaystyle \lim_{r\to \infty} \Delta T_{ideal}(r,t) = 0$$
+A long distance away from the wire the temperature profile remains constant.
+
+\vspace{3mm}
+
+The solution to this problem is well known and was analytically proven by Carlslaw H S and Jaeger J C in 1959, they found
+
+$$\Delta T_{ideal}(r,t) =  \frac{q}{4 \pi \lambda}  E_1 \left( \frac{4 \alpha t}{r^2}\right)$$
+
+Where $q$ is the power input per unit length of wire. The expression $E_1 \left( \frac{4 \alpha t}{r^2}\right)$ is the exponential integral and the series expansion of this exponential integral is 
+
+$$\Delta T_{ideal}(r,t) = \frac{q}{4 \pi \lambda} \left[ \ln \left( \frac{4 \alpha t}{r^2 C}\right) + \frac{\left( \frac{r^2}{4 \alpha t} \right)}{1(1!)} + \frac{\left( \frac{r^2}{4 \alpha t} \right)}{2(2!)} + ... \right]$$
+
+Where $ C = e^{\gamma} = 1.781 $ is the exponential of Euler's constant. 
+
+\vspace{3mm}
+
+For sufficiently long times i.e. small values of $\frac{r^2}{4 \alpha t}$ where $t \gg \frac{r^2}{4 \alpha}$ ($10ms \le t \le 100ms$). Also the surface of the hot wire imposes a uniform temperature which is equal to that in the conducting medium at $r = r_0$. The ideal equation describing the temperature history of the wire 
+
+$$\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha t}{r^2 C}\right)$$
+
+That can also be expressed as:
+$$\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha }{r^2 C}\right) + \frac{q}{4 \pi \lambda} \ln \left( t \right) $$
+\end{document}
