@@ -17,21 +17,22 @@
 %start
 \newpage \setcounter{page}{1}
 \section{Ideal Analytical Model}
+\subsection{Assumptions}
 To start the simplest model we apply the following assumptions:
 	\begin{itemize}
 		\item{The thermo-physical properties of the medium are always constant.}
 		\item{Hot wire has negligible heat capacity and a large thermal conductivity.}
 		\item{No thermal resistance exists between the contact of the medium and surface of the hot wire.} 
-		\item{Pure conductive heat transfer from an infinity long wire that has a  infinitely thin radius to an infinite medium.}
+		\item{Pure conductive heat transfer from an infinity long wire that has a  infinitely thin radius to an infinite surrounding medium.}
 	\end{itemize}
 
 Primarily there is heat transfer to the medium where the temperature of the hot wire varies with time. The heat transfer can be treated as a boundary condition as we are relative to the medium. The basic problem is driven by the non-stationary heat diffusion of Fourier's law
 
 $$\rho C_p \frac{\partial T}{\partial t} = \lambda \nabla^2T $$
  \begin{itemize}
- 	\item[] $\lambda$ is the thermal conductivity of the medium
- 	\item[] $\rho$ is the density of the medium
- 	\item[] $C_p$ is the specific heat capacity of the medium
+ 	\item[] $\lambda$ is the thermal conductivity of the medium.
+ 	\item[] $\rho$ is the density of the medium.
+ 	\item[] $C_p$ is the specific heat capacity of the medium.
  \end{itemize}
 
 Substituting in for the constants
@@ -49,21 +50,21 @@ This boundary condition states that at the start the wire is in thermal equilibr
 
 \textbf{(2)} At $r = 0 $ and $t \geq 0$
 $$ \displaystyle \lim_{r\to \infty} \left(r \frac{\delta T}{\delta r} \right) = -\frac{q}{2 \pi \lambda}$$
-\hl{This describes the radial temperature distribution as we get closer to the wire.}
+\hl{Where $q$ is the power input per unit length of wire. This describes the radial temperature distribution as we get closer to the wire.}
 
 \newpage
 
 \textbf{(3)} At $r = \infty$ and $t \geq 0$ 
 $$\displaystyle \lim_{r\to \infty} \Delta T_{ideal}(r,t) = 0$$
-A long distance away from the wire the temperature profile remains constant.
+\hl{A long distance away from the wire the temperature profile remains constant.}
 
-\vspace{3mm}
+\subsection{Solution to the Fourier equation}
 
 The solution to this problem is well known and was analytically proven by Carlslaw H S and Jaeger J C in 1959, they found
 
 $$\Delta T_{ideal}(r,t) =  \frac{q}{4 \pi \lambda}  E_1 \left( \frac{4 \alpha t}{r^2}\right)$$
 
-Where $q$ is the power input per unit length of wire. The expression $E_1 \left( \frac{4 \alpha t}{r^2}\right)$ is the exponential integral and the series expansion of this exponential integral is 
+The expression $E_1 \left( \frac{4 \alpha t}{r^2}\right)$ is the exponential integral and the series expansion of this exponential integral is 
 
 $$\Delta T_{ideal}(r,t) = \frac{q}{4 \pi \lambda} \left[ \ln \left( \frac{4 \alpha t}{r^2 C}\right) + \frac{\left( \frac{r^2}{4 \alpha t} \right)}{1(1!)} + \frac{\left( \frac{r^2}{4 \alpha t} \right)}{2(2!)} + ... \right]$$
 
@@ -71,10 +72,96 @@ Where $ C = e^{\gamma} = 1.781 $ is the exponential of Euler's constant.
 
 \vspace{3mm}
 
-For sufficiently long times i.e. small values of $\frac{r^2}{4 \alpha t}$ where $t \gg \frac{r^2}{4 \alpha}$ ($10ms \le t \le 100ms$). Also the surface of the hot wire imposes a uniform temperature which is equal to that in the conducting medium at $r = r_0$. The ideal equation describing the temperature history of the wire 
+For sufficiently long times (i.e. small values of $\frac{r^2}{4 \alpha t}$) where $t \gg \frac{r^2}{4 \alpha}$ (quantitatively where $10ms \le t \le 100ms$). \hl{Does this mean that for very short times (short enough to see thermophersis phenomenon) we should include the series expansion?} Also that the surface of the hot wire imposes a uniform temperature which is equal to that in the conducting medium at $r = r_0$. The ideal equation describing the temperature history of the wire 
 
-$$\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha t}{r^2 C}\right)$$
+\begin{equation} \label{eq:ideal}
+\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha t}{r^2_0 C}\right)
+\end{equation}
 
 That can also be expressed as:
-$$\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha }{r^2 C}\right) + \frac{q}{4 \pi \lambda} \ln \left( t \right) $$
+	\begin{equation} \label{eq:ideal2}
+	\Delta T_{ideal}(r_0,t) =  \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right) + \frac{q}{4 \pi \lambda} \ln \left( t \right)
+	\end{equation}
+
+At a fixed radial distance within two instances of time, the temperature change of the wire
+
+$$\Delta T_{2,ideal} - \Delta T_{1,ideal} = \frac{q}{4 \pi \lambda} \ln \left( \frac{t_2}{t_1} \right)$$
+
+Where subscripts 1 and 2 represent the first and second experimental reading respectively. The ideal thermal conductivity of the medium can be found as
+
+$$\lambda_{ideal} =  \frac{q}{4 \pi \left( \Delta T_{2,ideal} - \Delta T_{1,ideal} \right)}\ln \left( \frac{t_2}{t_1} \right)$$
+
+\newpage
+
+	\begin{equation} \label{eq:idealconductivity}
+\lambda_{ideal} =  \frac{q}{4 \pi} \frac{d\ln \left( t \right)}{d\Delta T_{ideal}}
+	\end{equation}
+	
+The typical ideal plot for the temperature change of the wire against the logarithmic time, for an ideal experiment of the THW will propose a straight line.
+
+\subsection{Technique for determining ideal thermal conductivity}
+\subsubsection{THW: For a single hot wire}
+Because of the well established temperature-resistance relationship of the wire, not only can it be used as a source of heat into the bulk medium but also as a temperature sensor.
+
+The wire’s temperature will change with time as there is a steady flow of heat into the  surrounding medium. As a result the electrical resistance, R, of the wire changes.
+\hl{Resistance of the wire can then be expressed as}
+
+\hl{[http://hyperphysics.phy-astr.gsu.edu/hbase/electric/restmp.html]}
+	
+$$R(t) = R_0 \left[ 1 + \sigma \Delta T_{ideal}(t) \right]$$
+
+ 	\begin{itemize}
+ 		\item[] \hl{$R_0$ is the initial resistance at room temperature.}
+ 		\item[] $\sigma$ is the temperature coefficient of resistance of the wire.
+ 	\end{itemize}
+
+From Ohms law, for a fixed current $I$, the potential difference across the terminal of the wire will be
+	\begin{equation} \label{eq:PD}
+	V(t) = R(t)I = R_0 \left[ 1 + \sigma \Delta T_{ideal}(t) \right] I
+	\end{equation}
+
+Substituting equation \ref{eq:ideal2} into equation \ref{eq:PD} yields
+	\begin{equation} \label{eq:PD2}
+	V(t) = R_0 \left[ 1 + \sigma \frac{q}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right) + \sigma \frac{q}{4 \pi \lambda} \ln \left( t \right) \right] I
+	\end{equation}
+
+The heat produced per unit length in the wire $q$, comes from the loss of potential energy of the flow of electrons $I$ as they move from the positive terminal of the wire to the negative terminal. By the Joule's effect the energy is converted to thermal energy from the collisions of electrons within the crystal lattice.  
+For an ideal case we can say that the energy per unit length $L$ produced as Joules heat into the medium for a fixed current  can be expressed as
+
+$$q = \frac{IV_0}{L}$$
+
+Through Ohms law 
+
+	\begin{equation} \label{eq:idealheat}
+	q = \frac{I^2R_0}{L}
+	\end{equation}
+	
+\newpage
+
+Substituting equation \ref{eq:idealheat} into equation \ref{eq:PD2}
+
+$$V(t) = R_0 \left[ 1 + \sigma \frac{I^2R_0/L}{4 \pi \lambda} \ln \left( \frac{4 \alpha } {r^2_0 C}\right) + \sigma \frac{I^2R_0/L}{4 \pi \lambda} \ln \left( t \right) \right] I$$
+	
+	\begin{equation} \label{eq:PD3}
+V(t) = R_0 I + \sigma \frac{I^3R_0^2/L}{4 \pi \lambda} \ln \left( \frac{4 \alpha } {r^2_0 C}\right) + \sigma \frac{I^3R_0^2/L}{4 \pi \lambda} \ln \left( t \right)
+	\end{equation}
+
+Replacing for the constants in equation \ref{eq:PD3}
+	\begin{equation} \label{eq:PD3}
+V(t) = A + B \ln \left( t \right)
+	\end{equation}
+
+Where $ A =  R_0 I + \sigma \frac{I^3R_0^2/L}{4 \pi \lambda} \ln \left( \frac{4 \alpha } {r^2_0 C}\right) $ and $ B = \sigma \frac{I^3R_0^2/L}{4 \pi \lambda}$
+
+Equation \ref{eq:PD3} shows that for an ideal experiment the voltage should be linear with respect to the logarithmic time.
+
+Differentiating \ref{eq:PD3} with respect to the log of time
+$$\frac{dV(t)}{d \ln (t)} = B = \frac{\sigma I^3R_0^2}{4 \pi \lambda L}$$
+
+Solving for the ideal thermal conductivity
+
+$$ \lambda_{ideal}= \frac{4 \pi L}{\sigma I^3R_0^2} \frac{dV(t)}{d \ln (t)} $$
+
+\subsubsection{THW: For a Wheatstone bridge }
+
 \end{document}
