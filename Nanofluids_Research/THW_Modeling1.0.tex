@@ -213,7 +213,37 @@ Where $A_s = R_{s,0} + R_{s,0} \sigma \frac{q_s}{4 \pi \lambda} \ln \left( \frac
 Substituting equation \ref{eq:R_long} and \ref{eq:R_short} into equation \ref{V_wb}
 $$V_{AB}(t) = \left( \frac{R_1 + A_l + B_l \ln (t)}{R_1 + A_l + B_l \ln (t) + R_3} - \frac{R_4}{R_2 + A_s + B_s \ln (t) + R_4} \right) V_{s}$$
 
+Replacing constants 
+
+
+
 \newpage
 
-\section{Non ideal analytical model}
+\section{Experimental corrections }
+The THW (including the cell) design is to mimic the ideal behaviour as much as possible. However, realistically it is impossible to create the perfect design. Therefore we need to make corrections that account for the deviation between the real instrument and the ideal model.
+
+To achieve the ideal temperature rise we have to add a number of corrections to the experimentally determined temperature rise
+
+$$ \Delta T_{ideal} = \Delta T_{experimental} + \sum_{i} \delta T_i$$
+
+\subsection{Finite radius of the wire}
+\subsection{Composite cylinders}
+\subsection{Knudsen effect}
+\subsection{Radiation}
+\subsection{Time dependant heat flux}
+The ideal analysis imposed that the applied heat flux $q$ of the wire remained constant during the measurement. Depending on the power source, thermal expansion of the wire, and the magnitude of the overall resistance changes during the run this may not be an adequate assumption.
+
+$$q(t) = \frac{I^2 R}{L}$$
+
+Provided that we have a platinum wire we can neglect the effect of thermal expansion as it its thermal expansion coefficient is small. The instantaneous heat flux can be represented as [Taken from NIST]
+
+$$ q(t) = \left( \frac{V_s(t)}{R_1 + R_2} \right) ^2 \frac{R_l(t) + R_s(t)}{L_l + L_s}$$
+
+where $V(t)$ is the voltage applied to the bridge, and $L$ is the corresponding length of the wire.
+A correction can be applied to $\Delta T_{experimental}(t)$ by the ratio of instantaneous $q(t_i)$ to the heat flux at the median time of the experiment $q(t_a)$.
+
+$$\Delta T_{corr}(t) = \Delta T_{experimental}(t) * \left( \frac{q(t_i)}{q(t_a)} \right)$$
+
+Where the median time is expressed as $t_a = (t_1 + t_2)/2$.
+At room temperature the drop in current is almost eactly offset by the rise in the hot wire resistance. But at lower temperatures the change in hot wire resistance predominates [NIST].
 \end{document}
