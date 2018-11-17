@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (MiKTeX 2.9.6840 64-bit) (preloaded format=pdflatex 2018.10.11)  14 NOV 2018 23:15
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (MiKTeX 2.9.6840 64-bit) (preloaded format=pdflatex 2018.10.11)  17 NOV 2018 01:07
 entering extended mode
 **./THW_Modeling1.0.tex
 (THW_Modeling1.0.tex
@@ -628,19 +628,25 @@ File: omscmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
 LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 23.
 
-[1] [2] [3] [4] (THW_Modeling1.0.aux)
+[1] [2] [3]
+<WBPIC3.png, id=27, 296.60812pt x 176.15813pt>
+File: WBPIC3.png Graphic file (type png)
+<use WBPIC3.png>
+Package pdftex.def Info: WBPIC3.png  used on input line 174.
+(pdftex.def)             Requested size: 207.62427pt x 123.30983pt.
+ [4 <./WBPIC3.png>] [5] [6] (THW_Modeling1.0.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 13312 strings out of 492966
- 273401 string characters out of 3126420
- 295293 words of memory out of 3000000
- 17130 multiletter control sequences out of 15000+200000
- 539727 words of font info for 51 fonts, out of 3000000 for 9000
+ 13325 strings out of 492966
+ 273551 string characters out of 3126420
+ 295336 words of memory out of 3000000
+ 17140 multiletter control sequences out of 15000+200000
+ 540073 words of font info for 52 fonts, out of 3000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,6n,63p,524b,382s stack positions out of 5000i,500n,10000p,200000b,50000s
+ 41i,7n,63p,577b,498s stack positions out of 5000i,500n,10000p,200000b,50000s
 <C:/Users/asmo9/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts
 /cm/cmbx10.pfb><C:/Users/asmo9/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/pu
 blic/amsfonts/cm/cmbx12.pfb><C:/Users/asmo9/AppData/Local/Programs/MiKTeX 2.9/f
@@ -656,10 +662,11 @@ X 2.9/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/Users/asmo9/AppData/Local/Pro
 grams/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/asmo9/AppDat
 a/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users
 /asmo9/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfonts/cm/cmsy7.p
-fb>
-Output written on THW_Modeling1.0.pdf (5 pages, 162965 bytes).
+fb><C:/Users/asmo9/AppData/Local/Programs/MiKTeX 2.9/fonts/type1/public/amsfont
+s/cm/cmti10.pfb>
+Output written on THW_Modeling1.0.pdf (7 pages, 194386 bytes).
 PDF statistics:
- 70 PDF objects out of 1000 (max. 8388607)
+ 85 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 6 words of extra memory for PDF output out of 10000 (max. 10000000)
 

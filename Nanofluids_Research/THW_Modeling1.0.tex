@@ -108,11 +108,14 @@ The wire’s temperature will change with time as there is a steady flow of heat
 
 \hl{[http://hyperphysics.phy-astr.gsu.edu/hbase/electric/restmp.html]}
 	
-$$R(t) = R_0 \left[ 1 + \sigma \Delta T_{ideal}(t) \right]$$
+	\begin{equation} \label{Resistance}
+	R(t) = R_0 \left[ 1 + \sigma \Delta T_{ideal}(t) \right]
+	\end{equation}
+
 
  	\begin{itemize}
  		\item[] \hl{$R_0$ is the initial resistance at room temperature.}
- 		\item[] $\sigma$ is the temperature coefficient of resistance of the wire.
+ 		\item[] $\sigma$ is the temperature coefficient of resistance of the wire. How do we find a value for this? \hl{See Nist paper for in situ calibration of the wire.}
  	\end{itemize}
 
 From Ohms law, for a fixed current $I$, the potential difference across the terminal of the wire will be
@@ -162,6 +165,55 @@ Solving for the ideal thermal conductivity
 
 $$ \lambda_{ideal}= \frac{4 \pi L}{\sigma I^3R_0^2} \frac{dV(t)}{d \ln (t)} $$
 
-\subsubsection{THW: For a Wheatstone bridge }
+Where $\frac{dV(t)}{d \ln (t)} $ is the gradient of the line and is expressed as a constant.
 
+\subsubsection{THW: For a Wheatstone bridge}
+
+	\begin{figure}[h]
+		\centering
+		\includegraphics[scale=0.7]{WBPIC3}
+		\caption{\textit{THW Wheatstone bridge schematic}}
+		\label{fig:pcbdesign}
+	\end{figure}
+
+The Wheatstone bridge is a classical technique that is commonly applied for temperature measurements. A major challenge to achieve accurate resistance measurements is to nullify the loading effect of the circuit from the digital voltmeter (DVM). These inaccuracies arise since the DVM draws a small amount of power from the circuit, even though the DVM has a relatively high impedance (e.g 50$M\Omega$). When the Wheatstone bridge is balanced the DVM does not draw any power from the circuit hence increasing accuracy by nullifying the loading effect. 
+
+\vspace{3mm}
+
+The relationship that describes the potential difference across Node A and Node B with respect to time  
+
+	\begin{equation} \label{V_wb}
+V_{AB}(t) = \left( \frac{R_1 + R_l(t)}{R_1 + R_l(t) + R_3} - \frac{R_4}{R_2 + R_s(t) + R_4} \right) V_{s}
+	\end{equation}
+
+Recalling equation \ref{Resistance} and \ref{eq:ideal2} we can write the the resistance of the long hot wire $R_l(t)$ as
+
+$$R_l(t) = R_{l,0} \left[ 1 + \sigma \frac{q_l}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right) + \sigma \frac{q_l}{4 \pi \lambda} \ln \left( t \right) \right]$$
+
+	\begin{equation} \label{eq:R_long}
+	R_l(t) = A_l + B_l \ln (t)
+	\end{equation}
+Where $A_l = R_{1,0} + R_{1,0} \sigma \frac{q_l}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right)$ and $B_l = R_{1,0} \sigma \frac{q_l}{4 \pi \lambda}$
+
+
+\vspace{3mm}
+
+And for the short hot wire $R_s(t)$
+
+$$R_s(t) = R_{s,0} \left[ 1 + \sigma \frac{q_s}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right) + \sigma \frac{q_s}{4 \pi \lambda} \ln \left( t \right) \right]$$
+	
+	\begin{equation} \label{eq:R_short}
+	R_s(t) = A_s + B_s \ln (t)
+	\end{equation}
+
+Where $A_s = R_{s,0} + R_{s,0} \sigma \frac{q_s}{4 \pi \lambda} \ln \left( \frac{4 \alpha }		{r^2_0 C}\right)$ and $B_s = R_{s,0} \sigma \frac{q_s}{4 \pi \lambda}$
+
+\vspace{3mm}
+
+Substituting equation \ref{eq:R_long} and \ref{eq:R_short} into equation \ref{V_wb}
+$$V_{AB}(t) = \left( \frac{R_1 + A_l + B_l \ln (t)}{R_1 + A_l + B_l \ln (t) + R_3} - \frac{R_4}{R_2 + A_s + B_s \ln (t) + R_4} \right) V_{s}$$
+
+\newpage
+
+\section{Non ideal analytical model}
 \end{document}
