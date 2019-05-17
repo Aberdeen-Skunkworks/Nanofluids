@@ -15,81 +15,22 @@ Voltage_Threshold = 0.7
 Current_Threshold = 0.01
 # ------------------------VM time------------------------------------
 
-VMtimeRaw = []
+VMtime = list(map(float, open("vtime.txt", "r").read().split(",")))
+voltage = list(map(float, open("voltage.txt", "r").read().split(",")))
+if len(VMtime) != len(voltage):
+    raise Exception("Length mismatch!")
 
-VMfile = open("vtime.txt", "r")
-for line in VMfile:
-    values = line.split(" ,")
-    for num in values:
-        VMtime.append(num)
-VMfile.close()
-del VMtime[-1]
-
-# VMtimelst = VMtime[0].split(' ,')
-
-for i in range(len(VMtime)):
-    VMtime[i] = int(VMtime[i])
-
-
-VMtime = [i for i in VMtime if i != 0]
-
-
-# Micro to milli
-for i in range(len(VMtime)):
-    VMtime[i] = VMtime[i]/1000
-
-
-# -------------------------Voltage-------------------------------------
-voltageRaw = []
-
-Vfile = open("voltage.txt", "r")
-for line in Vfile:
-    values = line.split(",")
-    for num in values:
-        voltageRaw.append(num)
-Vfile.close()
-
-for i in range(len(voltageRaw)):
-    voltageRaw[i] = float(voltageRaw[i])
-
-for i in range(len(voltageRaw)):
-    if (voltageRaw[i] > Voltage_Threshold):
-        voltage.append(voltageRaw[i])
-    else:
-        del VMtime[i]
-
-if (len(VMtime) != len(voltage)):
-    print("Voltage and time list do not match!")
-
+voltage = list(filter(lambda x : x[1] < Voltage_Threshold, zip(VMtime, voltage)))
 # --------------------Current---------------------------------
-currentRaw = []
 
-Ifile = open("current.txt", "r")
-for line in Ifile:
-    values = line.split(",")
-    for num in values:
-        currentRaw.append(num)
-Ifile.close()
-
-for i in range(len(currentRaw)):
-    currentRaw[i] = float(currentRaw[i])
-
-for num in currentRaw:
-    if (num > Current_Threshold):
-        current.append(num)
-
-
-def Average(lst):
-    return sum(lst) / len(lst)
-
-
-AvgCurrent = Average(current)
+currentRaw = map(float, open("current.txt", "r").read().split(","))
+currentRaw = list(filter(lambda I : I > Current_Threshold, currentRaw))
+AvgCurrent = sum(currentRaw) / len(currentRaw)
 
 # -------------------plot------------------------
 resistance = []
-for i in range(len(voltage)):
-    resistance.append(voltage[i]/AvgCurrent)
-
+for t,V in voltage:
+    resistance.append((t, V / AvgCurrent))
 
 def TempSolve(T, R):  # PT_6
     C_l = 5.719122779371328e-05
@@ -99,20 +40,11 @@ def TempSolve(T, R):  # PT_6
 
 
 print(resistance)
-Temp = []
-for n in range(len(resistance)):
-    x = fsolve(TempSolve, 0, resistance[n])
-    Temp.append(x)
+Temp = [(t, fsolve(TempSolve, 0, R)) for t, R in resistance]
+Temp0 = 20.69166168 #WHAT IS THIS? Starting temperature?
 
-Temp0 = 20.69166168
-
-DeltaT = []
-VMtimeLog = []
-
-for i in range(len(Temp)):
-    result = Temp[i] - Temp0
-    VMtimeLog.append(np.log(VMtime[i] - VMtime[0]))
-    DeltaT.append(result)
+DeltaT = [T - Temp[0][1] for t,T in Temp]
+VMtimeLog = [np.log(t - Temp[0][0]) for t,T in Temp]
 
 # ryrball linear regime
 DeltaT_eyed = []
@@ -124,7 +56,7 @@ for i in range(len(DeltaT)):
 
 slope, intercept = np.polyfit(VMtimeLog_eyed, DeltaT_eyed, 1)
 
-avgResistance = Average(resistance)
+avgResistance = sum(map(lambda x : x[1], resistance)) / len(resistance)
 length = 91.28E-3
 q = ((AvgCurrent**2)*avgResistance)/(length)
 
@@ -217,7 +149,6 @@ plt.legend(loc='best',  prop={'family': 'Times New Roman', 'size': 15}, markersc
 ax4.xaxis.set_tick_params(labelsize=14)
 ax4.yaxis.set_tick_params(labelsize=14)
 
-ax4.set_ylim([2.5, 7.2])
 
 #ax1.set_title("(a)", fontsize=15, **csfont)
 

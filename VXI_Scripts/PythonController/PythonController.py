@@ -283,23 +283,12 @@ while True:
         print("IM Time Array")
         print(len(IMtime))
 
-        with open("vtime.txt", "w") as VMfile:
-            for values in VMtime:
-                VMfile.write("%s ," % values)
-            VMfile.close()
-
-        with open("itime.txt", "w") as IMfile:
-            for values in IMtime:
-                IMfile.write("%s ," % values)
-            IMfile.close()
-
-        Ifile = open("current.txt", "w")
-        Ifile.write(','.join(map(str, current)))
-        Ifile.close()
-
-        Vfile = open("voltage.txt", "w")
-        Vfile.write(','.join(map(str, voltage)))
-        Vfile.close()
+        def writeArray(filename, array):
+            open(filename, "w").write(','.join(map(lambda x : repr(x), array)))
+        writeArray("vtime.txt", VMtime)
+        writeArray("itime.txt", IMtime)
+        writeArray("current.txt", current)
+        writeArray("voltage.txt", voltage)
 
         print("Writing to files Completed... plotting")
 
