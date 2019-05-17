@@ -9,10 +9,10 @@ from matplotlib.lines import Line2D
 import matplotlib.animation as animation
 from scipy.optimize import fsolve
 
-os.chdir("C://Users//asmo9//Desktop//Nanofluids//VXI//PythonController//THW_Results")
+#os.chdir("C://Users//asmo9//Desktop//Nanofluids//VXI//PythonController//THW_Results")
 print(os.getcwd())
 
-ser = serial.Serial('com4', 9600, timeout=20)
+GPIB=0
 
 # set up visa and print avalible resources
 rm = visa.ResourceManager()
@@ -20,12 +20,14 @@ print("Avaiable resources:")
 print(rm.list_resources())
 
 # set up communication with devices
-com = rm.open_resource('GPIB1::9::0::INSTR')
-Vmeter = rm.open_resource('GPIB1::9::23::INSTR')
-Imeter = rm.open_resource('GPIB1::9::3::INSTR')
-DA = rm.open_resource('GPIB1::9::6::INSTR')
-Relay = rm.open_resource('GPIB1::9::4::INSTR')
+com = rm.open_resource('GPIB'+str(GPIB)+'::9::0::INSTR')
+Vmeter = rm.open_resource('GPIB'+str(GPIB)+'::9::23::INSTR')
+Imeter = rm.open_resource('GPIB'+str(GPIB)+'::9::3::INSTR')
+DA = rm.open_resource('GPIB'+str(GPIB)+'::9::6::INSTR')
+Relay = rm.open_resource('GPIB'+str(GPIB)+'::9::4::INSTR')
 # Scope = rm.open_resource('ASRL3::INSTR')
+
+
 
 timeout_time = 50000  # 20 sec timeout
 data_size = 102400  # 100 kB of data
@@ -48,24 +50,22 @@ def WaitForInput():
     print("")
     print("=============================================")
     print("Control modes:")
-    print("(0) = Break Loop, (1) = Configure Meters, (2) = Bridge Balance, \
+    print("(0) = Exit, (1) = Configure Meters, (2) = Bridge Balance, \
  (3) = Run THW, (4) = ... ")
     userinput = input("Enter a command: ")
     print("---------------------------------------------")
     return userinput
 
-
-WaitForInput()
-
 while True:
+    WaitForInput()
     if (userinput == ("0")):
         print("Breaking...")
         break
-
     elif (userinput == ("1")):
-
         print("Conf meter")
+        ser = serial.Serial('com4', 9600, timeout=2)
         ser.write(b'0')
+        ser.close()
         # four wire resistance measure POT3 and POT4
         POT3 = 100.03
         POT4 = 100.01
@@ -116,12 +116,12 @@ while True:
         # set up the DA
         DA.write("*RST")
         DA.write("CAL2:STAT OFF")
-        DA.write("VOLT2 6")
+        DA.write("CURR2 0.015")
 
         # set up the relay
         Relay.write("*RST; *CLS")
         Relay.write("SCAN:PORT ABUS")
-        Relay.write("CLOS (@104, 190)")
+        Relay.write("CLOS (@105, 190)")
         time.sleep(0.5)
 
         # compensate for thermo electric effect
@@ -137,7 +137,7 @@ while True:
         # configure the V meter for speed
         Vmeter.write("CAL:LFR MIN")
         print("Volt meter Line Frequency = " + Vmeter.query("CAL:LFR?"))
-        Vmeter.write("CONF:VOLT:DC 0.002, DEF")
+        Vmeter.write("CONF:VOLT:DC 10, DEF")
         print("Voltage Res = " + Vmeter.query("VOLT:RES?"))
         print("Voltage Range = " + Vmeter.query("VOLT:RANG?"))
         Vmeter.write("CAL:ZERO:AUTO ON")
@@ -163,11 +163,8 @@ while True:
         Imeter.write("TRIG:SOUR EXT")
         print("Current Trigger Source = " + Imeter.query("TRIG:SOUR?"))
         Imeter.write("SAMP:COUN 500")
-        WaitForInput()
-
     elif (userinput == ("2")):
         if (Confed is False):
-
             Vmeter.write("*RST; *CLS")
             Vmeter.write("CAL:LFR 50")
             Vmeter.write("CONF:VOLT:DC 0.1,DEF")
@@ -192,13 +189,15 @@ while True:
 
             DA.write("*RST")
             DA.write("CAL2:STAT OFF")
-            DA.write("VOLT2 0.2")
+            DA.write("CURR2 0.001")
 
             Relay.write("*RST; *CLS")
             Relay.write("SCAN:PORT ABUS")
             Relay.write("CLOS (@104, 190)")
 
+            ser = serial.Serial('com4', 9600, timeout=2)
             ser.write(b'3')
+            ser.close()
             time.sleep(0.1)
             print("Ready")
 
@@ -207,9 +206,7 @@ while True:
         Vmeter.write("TRIG")
         val = Vmeter.query("FETC?")
         print(float(val))
-
     elif (userinput == ("3")):
-
         print("Started...")
         Imeter.write("INIT")
         Vmeter.write("INIT")
@@ -218,73 +215,67 @@ while True:
         VMtime = []
         IMtime = []
         GetStatus = []
-
+        
+        #Clear out what's been sent by the teensy already
+        ser = serial.Serial('com4', 9600, timeout=2)
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
         ser.write(b'1')
 
-        while True:
-            print("Powering...")
-            GetStatus = ser.readline()
-            if GetStatus:
-                break
-
         print("Gathering Meter Data...")
-        Vresult = Vmeter.query("FETC?")
-        Iresult = Imeter.query("FETC?")
+        Vquery = Vmeter.query("FETC?")
+        Iquery = Imeter.query("FETC?")
+        voltage = -np.array(list(map(float, Vquery.split(','))))
+        current = np.array(list(map(float, Iquery.split(','))))
+        
+        print("Meters Queried. Reading back data from the teensy")
 
-        print("Meters Queried...")
-
-        while True:
+        def readTeensy():
             raw_result = ser.readline()
-            if raw_result:
-                result_array.append(raw_result)
-            else:
-                break
-        ser.close()
+            if not raw_result:
+                raise Exception("Failed to receive reply from teensy")
+            return raw_result.decode('utf-8').replace("\r\n", "").strip()
+        
+        def readTeensyExpect(expected):
+            reply = readTeensy()
+            if reply != expected:     
+                raise Exception("Got unexpected teensy reply, expecting \"",expected,"\" but got \"", reply,"\"")
 
-        print("Raw Result Recived...")
-        print("Total length:")
-        print(len(result_array))
+        readTeensyExpect("PowerTimeStart")
+        PowerTimeStart = float(readTeensy())/1000
+        print("Power Time Start:", PowerTimeStart)
 
-        Array_Location_VMtime = 0
-        Array_Location_IMtime = 0
-        Array_Location_PowerTime = 0
-        Array_Location_PowerTimeStart = 0
+        readTeensyExpect("PowerTime")
+        PowerTime = float(readTeensy())/1000
+        print("Power Time:", PowerTime)
 
-        for i in range(len(result_array)):
-            result_array[i] = result_array[i].decode('utf-8')
-            result_array[i] = result_array[i].replace("\r\n", "")
+        
+        def loadTeensyArray(numreadings):
+            array = []
+            for i in range(numreadings):
+                reply = readTeensy()
+                try:
+                    value = float(reply)/1000
+                except:
+                    raise Exception("Expecting value but got ",repr(reply))
+                array.append(value)
+            return array
+    
+        readTeensyExpect("VMReadings")
+        VMreadings = int(readTeensy())
+        print("VMReadings:", VMreadings)
+        print("Parsing voltage measurement times")
+        readTeensyExpect("VMtime")
+        VMtime = loadTeensyArray(VMreadings)
 
-            if result_array[i] == "PowerTimeStart":
-                Array_Location_PowerTimeStart = i
-
-            elif result_array[i] == "PowerTime":
-                Array_Location_PowerTime = i
-
-            elif result_array[i] == "VMtime":
-                Array_Location_VMtime = i
-
-            elif result_array[i] == "IMtime":
-                Array_Location_IMtime = i
-
-            else:
-                continue
-
-        PowerTimeStart = result_array[Array_Location_PowerTimeStart + 1]
-        PowerTime = result_array[Array_Location_PowerTime + 1]
-
-        for x in range(Array_Location_VMtime + 1, Array_Location_IMtime):
-            VMtime.append(result_array[x])
-
-        for y in range(Array_Location_IMtime + 1, len(result_array)):
-            IMtime.append(result_array[y])
-
+        readTeensyExpect("IMReadings")
+        IMreadings = int(readTeensy())
+        print("VMReadings:", IMreadings)
+        print("Parsing current measurement times")
+        readTeensyExpect("IMtime")
+        IMtime = loadTeensyArray(IMreadings)        
+        ser.close()        
         print("Teensy Data Recived and Sorted...")
-
-        print("Power Time Start:")
-        print(PowerTimeStart)
-
-        print("Power Time:")
-        print(PowerTime)
 
         print("VM Time Array")
         print(len(VMtime))
@@ -303,64 +294,26 @@ while True:
             IMfile.close()
 
         Ifile = open("current.txt", "w")
-        Ifile.write(Iresult)
+        Ifile.write(','.join(map(str, current)))
         Ifile.close()
 
         Vfile = open("voltage.txt", "w")
-        Vfile.write(Vresult)
+        Vfile.write(','.join(map(str, voltage)))
         Vfile.close()
 
-        print("Writing to files Completed... ")
+        print("Writing to files Completed... plotting")
 
-        plotinput = input("Plot? (1: Yes): ")
-
-        if (plotinput == ("1")):
-
-            voltage = []
-            current = []
-
-            Vfile = open("voltage.txt", "r")
-            for line in Vfile:
-                values = line.split(",")
-                for num in values:
-                    voltage.append(num)
-            Vfile.close()
-
-            Ifile = open("current.txt", "r")
-            for line in Ifile:
-                values = line.split(",")
-                for num in values:
-                    current.append(num)
-            Ifile.close()
-
-            VMtime = [i for i in VMtime if i != '0']
-            IMtime = [i for i in IMtime if i != '0']
-
-            for i in range(len(VMtime)):
-                VMtime[i] = float(VMtime[i])/1000
-
-            for i in range(len(IMtime)):
-                IMtime[i] = float(IMtime[i])/1000
-
-            for i in range(len(voltage)):
-                voltage[i] = float(voltage[i])
-
-            for i in range(len(current)):
-                current[i] = float(current[i])
-
+        if True:
             fig = plt.figure()
             ax1 = fig.add_subplot(1, 2, 1)
             ax2 = fig.add_subplot(2, 2, 4)
             ax = fig.add_subplot(2, 2, 2)
 
-            for i in range(len(VMtime)):
-                ax.plot([VMtime[i], VMtime[i]], [0, 1], 'b', lw=0.1)
+            for i in VMtime:
+                ax.plot([i, i], [0, 1], 'b', lw=0.1)
 
-            for j in range(len(IMtime)):
-                ax.plot([IMtime[j], IMtime[j]], [0, 2], 'y', lw=0.1)
-
-            PowerTimeStart = float(PowerTimeStart)/1000
-            PowerTime = float(PowerTime)/1000
+            for j in IMtime:
+                ax.plot([j,j], [0, 2], 'y', lw=0.1)
 
             ax.plot([PowerTime+PowerTimeStart, PowerTime+PowerTimeStart], [0, 3], 'r', lw=1)
             ax.plot([PowerTimeStart, PowerTime+PowerTimeStart], [3, 3], 'r', lw=1)
@@ -372,6 +325,8 @@ while True:
             ax.set_yticklabels([])
             ax.set_xticklabels([])
 
+            #ax1.set_ylim([-0.1,1])
+            
             ax.set_xlabel('Time (ms)')
             ax.set_ylabel('')
             ax1.set_xlabel('Time (ms)')
@@ -387,21 +342,5 @@ while True:
  Complete'])
 
             plt.show()
-
-        else:
-            WaitForInput()
-
-        WaitForInput()
-        break
-
     elif (userinput == ("4")):
-        if (Confed is False):
-            DA.write("*RST")
-            DA.write("CAL1:STAT OFF")
-            DA.write("CAL2:STAT OFF")
-            DA.write("VOLT2 5")
-
-        Confed = True
-
-        print("confed")
-        time.sleep(1)
+        pass

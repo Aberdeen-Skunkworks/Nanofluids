@@ -12,7 +12,7 @@ import serial.tools.list_ports
 from matplotlib.lines import Line2D
 import matplotlib.animation as animation
 
-os.chdir("C://Users//asmo9//Desktop//Nanofluids//VXI//PythonController//CalibrationResults")
+os.chdir("./CalibrationResults")
 print(os.getcwd())
 
 # ser = serial.Serial('com4', 9600, timeout=1)
@@ -23,11 +23,11 @@ print("Avaiable resources:")
 print(rm.list_resources())
 
 # set up communication with devices
-com = rm.open_resource('GPIB1::9::0::INSTR')
-Vmeter = rm.open_resource('GPIB1::9::23::INSTR')
-Imeter = rm.open_resource('GPIB1::9::3::INSTR')
-DA = rm.open_resource('GPIB1::9::6::INSTR')
-Relay = rm.open_resource('GPIB1::9::4::INSTR')
+com = rm.open_resource('GPIB0::9::0::INSTR')
+Vmeter = rm.open_resource('GPIB0::9::23::INSTR')
+Imeter = rm.open_resource('GPIB0::9::3::INSTR')
+DA = rm.open_resource('GPIB0::9::6::INSTR')
+Relay = rm.open_resource('GPIB0::9::4::INSTR')
 # Scope = rm.open_resource('ASRL3::INSTR')
 
 timeout_time = 20000  # 20 sec timeout

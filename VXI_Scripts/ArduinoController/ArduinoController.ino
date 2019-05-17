@@ -1,19 +1,19 @@
-#include <Adafruit_BME280.h>
 
 #define ReadTrig 20
 #define VMcomplete 35 
 #define IMcomplete 36
 #define Power 29
+#define FET1 27
 #define PressurePin 8
 #define ledPin 13 //builtin LED
 
-enum State : uint8_t { STAND_BY = 1, START, SEND_DATA, BALANCE };
+enum State : uint8_t { STAND_BY = 1, INIT, RUN, SEND_DATA, BALANCE };
 State THW = STAND_BY;
 
 char rx_byte;
 elapsedMicros Timer;
 const unsigned int PowerTimeStart = 40000; //10ms
-const unsigned int PowerTime = 2000000; //2s
+const unsigned int PowerTime = 1000000; //2s
 const unsigned int numReadings = 1000;
 unsigned int VMtime[numReadings];
 unsigned int IMtime[numReadings];
@@ -46,13 +46,7 @@ void loop() {
   if ((rx_byte == '0')) {
       THW = STAND_BY;
    }else if ((rx_byte == '1')) {
-      PowerCheck = 0;
-      VMTrigCheck = 0;
-      IMTrigCheck = 0;
-      VMcounter = 0;
-      IMcounter = 0;
-      Timer = 0;
-      THW = START;
+      THW = INIT;
    }else if ((rx_byte == '2')) {
       THW = SEND_DATA;
    }else if ((rx_byte == '3')) {
@@ -64,44 +58,51 @@ void loop() {
   }
 
    switch(THW){
-
     case STAND_BY:
       digitalWrite(ledPin, HIGH);
       digitalWrite(ReadTrig, HIGH);
       digitalWrite(Power, LOW);
+      digitalWrite(FET1, HIGH);
       break;
-
-    case START:
+    case INIT:
+      PowerCheck = 0;
+      VMTrigCheck = 0;
+      IMTrigCheck = 0;
+      VMcounter = 0;
+      IMcounter = 0;
+      Timer = 0;
+      THW = RUN;
+      //No break, just carry on with the run!
+    case RUN: //Also running while in start mode.
       if (Timer <= (PowerTime + PowerTimeStart)){
         digitalWrite(ReadTrig, LOW);
         digitalWrite(ledPin, LOW);
         if (Timer >= PowerTimeStart){
+          digitalWrite(FET1, LOW);
           digitalWrite(Power, HIGH);
         }
       } else if (Timer > (PowerTime + PowerTimeStart) && PowerCheck == 0){
         Serial.println("Break");
         digitalWrite(Power, LOW);
-        PowerCheck = 1; 
+        PowerCheck = 1;
       }
 
-      if (VMTrigCheck == 1 && Timer <= PowerTime*10){
+      if (VMTrigCheck == 1){
         VMtime[VMcounter] = Timer;
         VMTrigCheck = 0;
         VMcounter++;
       } 
-      
-      if (IMTrigCheck == 1 && Timer <= PowerTime*10){
+
+      if (IMTrigCheck == 1){
         IMtime[IMcounter] = Timer;
         IMTrigCheck = 0;
         IMcounter++;
       } 
 
-      if (Timer > PowerTime*10){
+      if (Timer > PowerTime){
         THW = SEND_DATA;
-      }   
-     
+      }
       break;
-
     case SEND_DATA:
       Serial.println("PowerTimeStart");
       Serial.println(PowerTimeStart);
@@ -109,25 +110,28 @@ void loop() {
       Serial.println("PowerTime");
       Serial.println(PowerTime);
 
+      Serial.println("VMReadings");
+      Serial.println(VMcounter);
+
       Serial.println("VMtime");
-      for (unsigned int n = 0; n < numReadings; n++){
+      for (unsigned int n = 0; n < VMcounter; n++){
         Serial.println(VMtime[n]);
       }
 
+      Serial.println("IMReadings");
+      Serial.println(IMcounter);
       Serial.println("IMtime");
-      for (unsigned int i = 0; i< numReadings; i++){
+      for (unsigned int i = 0; i< IMcounter; i++){
         Serial.println(IMtime[i]);
       }
       
       THW = STAND_BY;
       
       break;
-
     case BALANCE:
       digitalWrite(Power, HIGH);
       break;
    }
-   
 }
 
 void ISR_VMTrigTiming(){

@@ -4,13 +4,14 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from scipy.optimize import fsolve
 
-os.chdir("C://Users//asmo9//Desktop//Nanofluids//VXI//PythonController//THW_Results")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(CURRENT_DIR)
 print(os.getcwd())
 
 VMtime = []
 voltage = []
 current = []
-Voltage_Threshold = 0.89
+Voltage_Threshold = 0.7
 Current_Threshold = 0.01
 # ------------------------VM time------------------------------------
 
