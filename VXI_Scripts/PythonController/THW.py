@@ -8,6 +8,8 @@ Created on Fri May 17 13:35:00 2019
 import visa
 import serial
 import time
+import math
+from scipy.optimize import fsolve
 
 class THW:
     def __init__(self, reset_rack = False, full_test = False, gpib = 0, serialport = 'com4'):
@@ -54,11 +56,15 @@ class THW:
             meter.write("CAL:LFR 50") #50hz line frequency for the UK
         
         ########### Volt meter configuration setup
+        # We store the two volt meter modes in the meter itself
         #Configure the volt meter for very high resolution single readings of four wire resistance
+        self.Vmeter.write("*RST") # Reset to power-on configuration again
         self.Vmeter.write("RES:OCOM ON") #Turn on offset compensation, this tests resistances with current off/on to eliminate thermal offsets
         #self.Vmeter.write("CAL:ZERO:AUTO ON") #Turn on autozero, this halves measurement speed but removes internal DC offset
         #Autozero is not needed when using offset compensation anyway
         #Resolution
+        #Checking the meter manual, the current supplied ranges from 488mA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
+        #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm
         self.Vmeter.write("CONF:FRES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
         #AUTO range increases measurement time by 150ms but guarantees the best range is used
         #self.Vmeter.write("RES:NPLC 16") #16 NLPC
@@ -81,21 +87,94 @@ class THW:
         self.Vmeter.write("TRIG:SLOP NEG") 
         self.Vmeter.write("*SAV 1") #Save as setup 1
 
-       
-        #self.Vmeter.write("INIT") #Initialise the meter ready to be triggered, causing a trigger
-        #self.Vmeter.write("TRIG") #Trigger the meter immediately
-        #print(self.Vmeter.query("FETCH?")) #Fetch the result
-        #print(self.Vmeter.query("READ?")) #Fetch the result
-        #Checking the meter manual, the current supplied ranges from 488mA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
-        #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm        
-        
         self.checkStatus()
         
+        #Now we calibrate the DA supply
         self.calibrateDA(2)
         if full_test:
             self.verifyDA(2)
 
         self.checkStatus()
+        
+        # Now we can check the voltmeter is wired correctly
+        
+        # find temp of cell and wires
+        #http://www.vishay.com/docs/33017/tfpt.pdf TFPT0805L1201FV TFPT0805 Linear 120x10^1 Ohm ?F=+-1% V #Lead-free 1000pcs
+        def ThermistorSolve(T, R, Rref=1206.323):  # PT_6
+            return Rref*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3)) - R
+       
+        def ThermistorT(R, Rref=1206.323):
+            return 28.54 * (R/Rref)**3 - 158.5*(R/Rref)**2 + 474.8 * (R/Rref) - 319.85
+        #Get the table of ratio tolerances digitized
+        
+        #Our probe is this
+        #https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
+        #1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
+        #This means the alpha is 0.00385 
+        #Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
+        #We can use the Callendar-Van Dusen expression to calculate T
+        def RTD_Solve(ProbeRES):
+            A = 3.908E-3
+            B = -5.775E-7
+            #C = -4.183E-12
+            Ro = 100
+            Temp = (-Ro*A)+math.sqrt(Ro**2 * A**2 - 4 * Ro * B * (Ro - ProbeRES))  / (2*Ro*B)
+            return Temp
+        
+        #
+        def Long_HW_Solve(Temp, Res):
+            C_l = 5.719122779371328e-05
+            B_l = 0.2005214939916926
+            A_l = 52.235976794620974
+            return (A_l + (B_l*Temp) + (C_l*(Temp**2)))- Res
+        
+        def Short_HW_Solve(Temp, Res):
+            C_s = 2.861284460413907e-05
+            B_s = 0.1385312594407914811
+            A_s = 35.62074654189631
+            return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
+        
+        #WB_sense - CH 4
+        #R_current - CH 0
+        #Long_HW_Sense - CH 5
+        #Short_HE_sense - CH 1
+        #PT_Power - CH 11
+        #WB_Power - CH 8
+        #POT_1 - CH 2
+        #POT_2 - CH 6
+        #PT_6 - CH 3
+        #PT_5 - CH 12
+        #PT_4 - CH 9
+        #PT_3 - CH 10
+        #PT_2 - CH 14
+        #PT_1 - CH 13
+        #RTD_Probe_Power - CH 15
+        #RTD_Probe_Sense - CH 7
+        
+        for i,x in enumerate([113, 114, 110, 109, 112, 103]):
+            val = self.FourWire(111, 103)
+            ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
+            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val))
+        
+        val = self.FourWire(107, 115)
+        RTD_Temp = RTD_Solve(float(val))
+        print("PT100 probe temp:", RTD_Temp)
+        
+        val = self.FourWire(108, 101)
+        Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
+        print("Short HW Temp:", Short_HW_Temp)
+        
+        val = self.FourWire(108, 105)
+        Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
+        print("Long HW Temp:", Long_HW_Temp)              
+        
+    def FourWire(self, DriveCH, SenseCH):
+        #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
+        self.Relay.write("CLOS (@%s,%s,190,191)" % (DriveCH, SenseCH))
+        self.Vmeter.write("*RST; *RCL 0") # Load the four wire resistance measurement
+        Resistance = float(self.Vmeter.query("READ?"))
+        self.Relay.write("*RST")
+        return Resistance
 
     def IMeterSlowConf(self):
         '''Setup the current meter for slow but accurate single measurements'''
@@ -131,7 +210,8 @@ class THW:
         zeroval = self.Imeter.query("READ?").strip()
         self.DA.write("CURR"+channel+" MAX")  # Measure max value
         maxval = self.Imeter.query("READ?").strip()        
-        print("DA"+channel+" uncal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/0.024+1)*100,float(zeroval)/0.024*100,(float(maxval)/0.024-1)*100))
+        self.DA.write("CURR"+channel+" DEF")  # Disable the current again
+        #print("DA"+channel+" uncal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/0.024+1)*100,float(zeroval)/0.024*100,(float(maxval)/0.024-1)*100))
         #Tell the DA the values so it can internally calibrate
         self.DA.write("CAL"+channel+":CURR "+minval+","+zeroval+","+maxval)
         self.DA.write("CAL"+channel+":STAT ON") #Enable calibration
@@ -148,6 +228,7 @@ class THW:
         zeroval = float(self.Imeter.query("READ?").strip())
         self.DA.write("CURR"+channel+" MAX")  # Measure max value
         maxval = float(self.Imeter.query("READ?").strip())
+        self.DA.write("CURR"+channel+" DEF")  # Disable the current again
         
         print("DA"+channel+" cal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/0.02184+1)*100,float(zeroval)/0.02184*100,(float(maxval)/0.02184-1)*100))
         if abs(minval+0.02184) > 0.0005*0.02184+7e-6:

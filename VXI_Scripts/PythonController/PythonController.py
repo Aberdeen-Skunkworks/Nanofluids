@@ -86,10 +86,10 @@ while True:
             return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
         
         def RunMeter():
-            time.sleep(0.02)  # GIVE RELAYS TIME
+           time.sleep(0.02)  # GIVE RELAYS TIME
             Vmeter.write("INIT")
             Vmeter.write("TRIG")
-            return Vmeter.query("FETC?")
+            return Vmeter.query("FETC?") 
         
         def FourWire(CH1, CH2):
             Relay.write("CLOS (@%s,%s)" % (CH1, CH2))
@@ -109,7 +109,7 @@ while True:
 
         Relay.write("*RST; *CLS")
         Relay.write("SCAN:PORT ABUS")
-        Relay.write("CLOS (@190, 191)") #Important! close relays of each tree
+        Relay.write("CLOS (@190, 191)") #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
         
         val = FourWire(111, 103)
         ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))
