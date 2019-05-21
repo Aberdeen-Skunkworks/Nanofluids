@@ -39,12 +39,6 @@ Vmeter.chunk_size = data_size
 
 Confed = False
 
-
-def ThermistorSolve(T, R):  # PT_6
-    R25 = 1206.323
-    return (R25*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3))) - R
-
-
 def WaitForInput():
     global userinput
     print("")
@@ -62,15 +56,48 @@ while True:
         print("Breaking...")
         break
     elif (userinput == ("1")):
-        print("Conf meter")
         ser = serial.Serial('com4', 9600, timeout=2)
         ser.write(b'0')
         ser.close()
-        # four wire resistance measure POT3 and POT4
-        POT3 = 100.03
-        POT4 = 100.01
 
-        # find temp cell to find wire resistance
+        # find temp of cell and wires
+        def ThermistorSolve(T, R):  # PT_6
+            R25 = 1206.323
+            return (R25*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3))) - R
+       
+        def RTD_Solve(ProbeRES):
+            A = 3.908E-3
+            B = -5.775E-7
+            C = -4.183E-12
+            Ro = 100
+            Temp = ((-1*Ro*A)+np.sqrt(((Ro**2) * (A**2)) - (4 * Ro * B * (Ro - ProbeRES)))) / (2*Ro*B)
+            return Temp
+        
+        def Long_HW_Solve(Temp, Res):
+            C_l = 5.719122779371328e-05
+            B_l = 0.2005214939916926
+            A_l = 52.235976794620974
+            return (A_l + (B_l*Temp) + (C_l*(Temp**2)))- Res
+        
+        def Short_HW_Solve(Temp, Res):
+            C_s = 2.861284460413907e-05
+            B_s = 0.1385312594407914811
+            A_s = 35.62074654189631
+            return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
+        
+        def RunMeter():
+            time.sleep(0.02)  # GIVE RELAYS TIME
+            Vmeter.write("INIT")
+            Vmeter.write("TRIG")
+            return Vmeter.query("FETC?")
+        
+        def FourWire(CH1, CH2):
+            Relay.write("CLOS (@%s,%s)" % (CH1, CH2))
+            Resistance = RunMeter()
+            Relay.write("OPEN (@%s,%s)" % (CH1, CH2))
+            return Resistance
+        
+        #Configure the volt meter for very high resolution readings
         Vmeter.write("*RST; *CLS")
         Vmeter.write("CAL:LFR 50")
         Vmeter.write("CONF:FRES 1861,DEF")
@@ -82,37 +109,26 @@ while True:
 
         Relay.write("*RST; *CLS")
         Relay.write("SCAN:PORT ABUS")
-        Relay.write("CLOS (@190, 191, 111, 103)")
-        time.sleep(0.2)
-
-        Vmeter.write("INIT")
-        Vmeter.write("TRIG")
-        val = Vmeter.query("FETC?")
-        print(float(val))
-        Temp = fsolve(ThermistorSolve, 0, float(val))
-        print(Temp)
-
-        # resistance of wires
-        C_l = 5.719122779371328e-05
-        B_l = 0.2005214939916926
-        A_l = 52.235976794620974
-        LW = A_l + (B_l*Temp) + (C_l*(Temp**2))
-        print(LW)
-
-        C_s = 2.861284460413907e-05
-        B_s = 0.1385312594407914811
-        A_s = 35.62074654189631
-        SW = A_s + (B_s*Temp) + (C_s*(Temp**2))
-        print(SW)
-
-        POT1 = POT3 - LW
-        POT2 = POT4 - SW
-
-        print(POT1)
-        print(POT2)
-
-        print("done calc")
-
+        Relay.write("CLOS (@190, 191)") #Important! close relays of each tree
+        
+        val = FourWire(111, 103)
+        ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))
+        print("Thermistor Temp:", ThermistorTemp)
+        
+        val = FourWire(107, 115)
+        RTD_Temp = RTD_Solve(float(val))
+        print("PT100 Temp:", RTD_Temp)
+        
+        val = FourWire(108, 101)
+        Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))
+        print("Short HW Temp:", Short_HW_Temp)
+        
+        val = FourWire(108, 105)
+        Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))
+        print("Long HW Temp:", Long_HW_Temp)
+        
+        #Configure modules for experiment 
+        
         # set up the DA
         DA.write("*RST")
         DA.write("CAL2:STAT OFF")
@@ -122,7 +138,7 @@ while True:
         Relay.write("*RST; *CLS")
         Relay.write("SCAN:PORT ABUS")
         Relay.write("CLOS (@105, 190)")
-        time.sleep(0.5)
+        time.sleep(0.02)
 
         # compensate for thermo electric effect
         # Vmeter.write("INIT")

@@ -34,7 +34,7 @@ for t,V in voltage:
 
 def TempSolve(T, R):  # PT_6
     C_l = 5.719122779371328e-05
-    B_l = 0.2005214939916926
+    B_l = 0.2005214939916926 
     A_l = 52.235976794620974
     return (A_l + (B_l * T) + (C_l * T**2)) - R
 
