@@ -7,9 +7,10 @@ Created on Fri May 17 13:35:00 2019
 
 import visa
 import serial
+import time
 
 class THW:
-    def __init__(self, gpib = 0, serialport = 'com4'):
+    def __init__(self, reset_rack = False, full_test = False, gpib = 0, serialport = 'com4'):
         self.ser = serial.Serial(serialport, 9600, timeout=2)
         self.ser.write(b'0')
         self.ser.close()
@@ -29,15 +30,26 @@ class THW:
         self.Relay = self.rm.open_resource('GPIB'+str(gpib)+'::9::4::INSTR')
         
         visa_timeout_time = 5000  # 5 sec timeout
+        if full_test:
+            visa_timeout_time = 20000  # 20 sec timeout, needed for meter self test!
         visa_chunk_size = 102400  # 100 kB of data
         
-        #Fast check of device communication
+        #Setup communication
         for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
             dev.timeout = visa_timeout_time #Timeout needs to be long enough for some of the slow devices to respond
             dev.chunk_size = visa_chunk_size #Chunk just needs to be big enough for any/all data transfers
-            dev.write("*RST; *CLS") #Reset the device back to its power on state, also clear the status byte used to indicate errors
-            print("Device:", dev.query("*IDN?").strip(), flush=True) # Print the identification of the device to check two-way communication
+ 
+        #Force the rack to reset itself (useful if the meters have become locked up due to misuse)
+        if reset_rack:
+            print("Resetting VXI rack....wait 10s for them to come back")
+            self.com.write("DIAG:BOOT:COLD")
+            time.sleep(10)
     
+        if full_test:
+            self.VXIselftest()
+            for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
+                dev.write("*RST; *CLS") #Reset the device back to its power on state, also clear the status byte used to indicate errors
+
         for meter in [self.Vmeter, self.Imeter]:
             meter.write("CAL:LFR 50") #50hz line frequency for the UK
         
@@ -76,10 +88,14 @@ class THW:
         #print(self.Vmeter.query("READ?")) #Fetch the result
         #Checking the meter manual, the current supplied ranges from 488mA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
         #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm        
+        
+        self.checkStatus()
+        
+        self.calibrateDA(2)
+        if full_test:
+            self.verifyDA(2)
 
         self.checkStatus()
-        self.calibrateDA(2)
-        self.verifyDA(2)
 
     def IMeterSlowConf(self):
         '''Setup the current meter for slow but accurate single measurements'''
@@ -144,14 +160,11 @@ class THW:
     def checkStatus(self):
         '''Checks the status bytes of every VXI device to see if any are in an error state'''
         for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
-            try:
-                statusbyte = int(dev.query("*STB?"))
-            except Exception as e:
-                raise Exception("Failed to check",repr(dev), "status byte!")
-            if statusbyte != 0:
-                raise Exception("Device",repr(dev),"has status byte !=0",statusbyte)
+            errcode,errstring = dev.query("SYSTEM:ERROR?").split(",")
+            if int(errcode) != 0:
+                raise Exception("Device",repr(dev),"has errcode",errcode," ",errstring)
     
-    def selftest(self):
+    def VXIselftest(self):
         '''Runs the built-in self test for each VXI device to check its ok'''
         print("Testing devices ")
         for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
@@ -167,8 +180,6 @@ class THW:
 
     def VmeterHiResConf(self):
         '''Configures the volt meter for the highest resolution readings'''
-
-
         self.Relay.write("SCAN:PORT ABUS")
         self.Relay.write("CLOS (@190, 191)") #Important! close relays of each tree
         
