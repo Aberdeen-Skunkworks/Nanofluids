@@ -51,19 +51,18 @@ class THW:
             self.VXIselftest()
             for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
                 dev.write("*RST; *CLS") #Reset the device back to its power on state, also clear the status byte used to indicate errors
-
-        for meter in [self.Vmeter, self.Imeter]:
-            meter.write("CAL:LFR 50") #50hz line frequency for the UK
         
         ########### Volt meter configuration setup
         # We store the two volt meter modes in the meter itself
         #Configure the volt meter for very high resolution single readings of four wire resistance
         self.Vmeter.write("*RST") # Reset to power-on configuration again
+        self.Vmeter.write("CAL:LFR 50") #50hz line frequency for the UK
         self.Vmeter.write("RES:OCOM ON") #Turn on offset compensation, this tests resistances with current off/on to eliminate thermal offsets
         #self.Vmeter.write("CAL:ZERO:AUTO ON") #Turn on autozero, this halves measurement speed but removes internal DC offset
         #Autozero is not needed when using offset compensation anyway
         #Resolution
-        #Checking the meter manual, the current supplied ranges from 488mA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
+        #Checking the meter manual, the current supplied ranges from 488uA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
+        #Note that the manual incorrectly states 488mA, but the datasheet states 488uA or 11.5V.
         #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm
         self.Vmeter.write("CONF:FRES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
         #AUTO range increases measurement time by 150ms but guarantees the best range is used
@@ -96,10 +95,14 @@ class THW:
 
         self.checkStatus()
         
+    def Temptest(self):
         # Now we can check the voltmeter is wired correctly
         
         # find temp of cell and wires
-        #http://www.vishay.com/docs/33017/tfpt.pdf TFPT0805L1201FV TFPT0805 Linear 120x10^1 Ohm ?F=+-1% V #Lead-free 1000pcs
+        # 
+        # Thermistor 1, 2, 3, 5,6 is  TFPT0805L1201FV TFPT0805 Linear 120x10^1=1200 Ohm ?F=+-1% V #Lead-free 1000pcs
+        # Thermistor 4 is TFPT1206L1002FV TFPT1206 Linear 100*10^2=10k Ohm ?F=+-1% V #Lead-free 1000pcs
+        #http://www.vishay.com/docs/33017/tfpt.pdf 
         def ThermistorSolve(T, R, Rref=1206.323):  # PT_6
             return Rref*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3)) - R
        
@@ -121,7 +124,6 @@ class THW:
             Temp = (-Ro*A)+math.sqrt(Ro**2 * A**2 - 4 * Ro * B * (Ro - ProbeRES))  / (2*Ro*B)
             return Temp
         
-        #
         def Long_HW_Solve(Temp, Res):
             C_l = 5.719122779371328e-05
             B_l = 0.2005214939916926
@@ -134,57 +136,71 @@ class THW:
             A_s = 35.62074654189631
             return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
         
-        #WB_sense - CH 4
-        #R_current - CH 0
-        #Long_HW_Sense - CH 5
-        #Short_HE_sense - CH 1
-        #PT_Power - CH 11
-        #WB_Power - CH 8
-        #POT_1 - CH 2
-        #POT_2 - CH 6
+        #Voltage tree
+        ##R_current - CH 0
+        ##Short_HW_sense - CH 1
+        ##POT_1 - CH 2
         #PT_6 - CH 3
-        #PT_5 - CH 12
-        #PT_4 - CH 9
-        #PT_3 - CH 10
-        #PT_2 - CH 14
-        #PT_1 - CH 13
-        #RTD_Probe_Power - CH 15
+        ##WB_sense - CH 4
+        ##Long_HW_Sense - CH 5
+        ##POT_2 - CH 6
         #RTD_Probe_Sense - CH 7
         
-        for i,x in enumerate([113, 114, 110, 109, 112, 103]):
-            val = self.FourWire(111, 103)
+        #Current tree
+        #WB_Power - CH 8
+        #PT_4 - CH 9
+        #PT_3 - CH 10
+        #PT_Power - CH 11
+        #PT_5 - CH 12
+        #PT_1 - CH 13
+        #PT_2 - CH 14
+        #RTD_Probe_Power - CH 15
+        
+        for i,chan in enumerate([[113,111,191,192], [114,111,191,192], [110,111,191,192], [109,111,191,192], [112,111,191,192], [103,111,190,191]]):
+            val = self.FourWire(chan)
             ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
             print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val))
         
-        val = self.FourWire(107, 115)
-        RTD_Temp = RTD_Solve(float(val))
-        print("PT100 probe temp:", RTD_Temp)
+        val = self.FourWire([107, 115, 190, 191])
+        RTD_Temp = RTD_Solve(val)
+        print("PT100 probe R=",val,"temp:", RTD_Temp)
         
-        val = self.FourWire(108, 101)
+        val = self.FourWire([101, 108, 190, 191])
         Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
         print("Short HW Temp:", Short_HW_Temp)
         
-        val = self.FourWire(108, 105)
+        val = self.FourWire([105, 108, 190, 191])
         Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
         print("Long HW Temp:", Long_HW_Temp)              
         
-    def FourWire(self, DriveCH, SenseCH):
+    def FourWire(self, channels):
         #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
-        self.Relay.write("CLOS (@%s,%s,190,191)" % (DriveCH, SenseCH))
-        self.Vmeter.write("*RST; *RCL 0") # Load the four wire resistance measurement
+        self.Relay.write("CLOS (@"+",".join(map(str,channels))+")")
+        # Load the four wire resistance measurement, add a delay for the meters and take the reading
+        self.Vmeter.write("*RST")
+        self.Vmeter.write("*RCL 0")
+        #self.Vmeter.write("TRIG:DELAY 0.2;:TRIG:SOURCE HOLD;") #Tell the meter be triggered immediately when INITialise'd        
+        #self.Vmeter.write("TRIG:DELAY 0.2")
+        #self.Vmeter.write("TRIG:SOURCE HOLD")
+        #self.Vmeter.write("INIT")
+        #self.Vmeter.write("TRIG")
+        #Resistance = float(self.Vmeter.query("FETCH?"))
         Resistance = float(self.Vmeter.query("READ?"))
+        self.checkStatus()
         self.Relay.write("*RST")
         return Resistance
 
     def IMeterSlowConf(self):
         '''Setup the current meter for slow but accurate single measurements'''
         self.Imeter.write("*RST")
+        self.Imeter.write("CAL:LFR 50") #50hz line frequency for the UK
         self.Imeter.write("CONF:CURR AUTO,MIN") # 50mA range, min/slow resolution (best)
         self.Imeter.write("CAL:ZERO:AUTO ON") # Enable auto-zero
         self.Imeter.write("TRIG:SOUR IMM") # Ready to trigger immediately
         
     def IMeterFastConf(self):
         self.Imeter.write("*RST")
+        self.Imeter.write("CAL:LFR 50") #50hz line frequency for the UK
         self.Imeter.write("CONF:CURR 0.05,MAX") # 50mA range, max/fast resolution (worst) (should be 0.02 NPLC, so 2.5kHz)
         self.Imeter.write("CAL:ZERO:AUTO OFF") # Disable auto-zero
         self.Imeter.write("SAMP:COUN 500")
@@ -258,13 +274,4 @@ class THW:
                 raise Exception("Device ", repr(dev), "returned failed test")
             print("OK!")
             
-
-    def VmeterHiResConf(self):
-        '''Configures the volt meter for the highest resolution readings'''
-        self.Relay.write("SCAN:PORT ABUS")
-        self.Relay.write("CLOS (@190, 191)") #Important! close relays of each tree
-        
-    def VmeterHiSpeedConf(self, long=False):
-        '''Configure the Vmeter to take a burst of measurements'''
-        #Its possible to read 32k samples at 13khz or more at 12.82kHz
         
