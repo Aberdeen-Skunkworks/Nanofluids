@@ -11,35 +11,74 @@ import time
 import math
 from scipy.optimize import fsolve
 
+class Instrument():
+    def __init__(self, name, rm, address, full_test, visa_timeout_time=5000, visa_chunk_size=102400):
+        self.name = name
+        self.resource = rm.open_resource(address)
+        #Timeout needs to be long enough for some of the slow devices to respond
+        self.resource.timeout = visa_timeout_time
+        #Chunk just needs to be big enough for any/all data transfers
+        self.resource.chunk_size = visa_chunk_size
+        
+    def query(self, cmd):
+        retval = None
+        try:
+            retval = self.resource.query(cmd)
+            pass
+        except Exception as e:
+            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
+        except:
+            raise Exception("!!!")
+        
+        self.check_errors()
+        return retval
+    
+    def write(self, cmd):
+        retval = self.resource.write(cmd)
+        self.check_errors()
+        return retval
+    
+    def get_errors(self):
+        '''Checks the status bytes of the device to see if any are in an error state'''
+        error=""
+        while True:
+            errcode,errstring = self.resource.query("SYSTEM:ERROR?").split(",")
+            if int(errcode) == 0:
+                break
+            error=error+' '+errcode+":"+errstring.strip()
+        return error
+    
+    def check_errors(self):
+        error = self.get_errors()
+        if error != "":
+            raise Exception(self.name+": Error "+error)
+
 class THW:
     def __init__(self, reset_rack = False, full_test = False, gpib = 0, serialport = 'com4'):
+        #Set the teensy to its default state
         self.ser = serial.Serial(serialport, 9600, timeout=2)
         self.ser.write(b'0')
         self.ser.close()
         
-        '''Initialises the VXI device communication and sets the default parameters'''
         self.rm = visa.ResourceManager()
-        # set up communication with devices
-        #E1406A command module
-        self.com = self.rm.open_resource('GPIB'+str(gpib)+'::9::0::INSTR')
-        #E1411B 5.5 digit multimeter
-        self.Vmeter = self.rm.open_resource('GPIB'+str(gpib)+'::9::23::INSTR')
-        #E1412A 6.5 digit multimeter
-        self.Imeter = self.rm.open_resource('GPIB'+str(gpib)+'::9::3::INSTR')
-        #E1328A Digital analogue converter
-        self.DA = self.rm.open_resource('GPIB'+str(gpib)+'::9::6::INSTR')
-        #E1345A Relay mux
-        self.Relay = self.rm.open_resource('GPIB'+str(gpib)+'::9::4::INSTR')
-        
+
         visa_timeout_time = 5000  # 5 sec timeout
         if full_test:
             visa_timeout_time = 20000  # 20 sec timeout, needed for meter self test!
-        visa_chunk_size = 102400  # 100 kB of data
+            
         
-        #Setup communication
-        for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
-            dev.timeout = visa_timeout_time #Timeout needs to be long enough for some of the slow devices to respond
-            dev.chunk_size = visa_chunk_size #Chunk just needs to be big enough for any/all data transfers
+        # set up communication with devices
+        #E1406A command module
+        self.com = Instrument("CommandModule", self.rm, 'GPIB'+str(gpib)+'::9::0::INSTR', full_test, visa_timeout_time)
+        #E1411B 5.5 digit multimeter
+        self.Vmeter = Instrument("VMeter", self.rm, 'GPIB'+str(gpib)+'::9::23::INSTR', full_test, visa_timeout_time)
+        #E1412A 6.5 digit multimeter
+        self.Imeter = Instrument("IMeter", self.rm, 'GPIB'+str(gpib)+'::9::3::INSTR', full_test, visa_timeout_time)
+        #E1328A Digital analogue converter
+        self.DA = Instrument("DA", self.rm, 'GPIB'+str(gpib)+'::9::6::INSTR', full_test, visa_timeout_time)
+        #E1345A Relay mux
+        self.Relay = Instrument("RelayMux", self.rm, 'GPIB'+str(gpib)+'::9::4::INSTR', full_test, visa_timeout_time)
+        
  
         #Force the rack to reset itself (useful if the meters have become locked up due to misuse)
         if reset_rack:
@@ -64,7 +103,8 @@ class THW:
         #Checking the meter manual, the current supplied ranges from 488uA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
         #Note that the manual incorrectly states 488mA, but the datasheet states 488uA or 11.5V.
         #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm
-        self.Vmeter.write("CONF:FRES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
+        self.Vmeter.write("CONF:FRES 14894,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
+        #self.Vmeter.write("CONF:RES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
         #AUTO range increases measurement time by 150ms but guarantees the best range is used
         #self.Vmeter.write("RES:NPLC 16") #16 NLPC
         #self.Vmeter.write("RES:APER 3.2E-01")  # 320ms aperature
@@ -193,11 +233,11 @@ class THW:
         
         val = self.FourWire([101, 108, 190, 191])
         Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
-        print("Short HW Temp:", Short_HW_Temp)
+        print("Short HW R=",val,"Temp:", Short_HW_Temp)
         
         val = self.FourWire([105, 108, 190, 191])
         Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
-        print("Long HW Temp:", Long_HW_Temp) 
+        print("Long HW R=",val,"Temp:", Long_HW_Temp) 
         
     def FourWire(self, channels):
         #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
@@ -215,6 +255,7 @@ class THW:
         #self.Vmeter.write("TRIG")
         #Resistance = float(self.Vmeter.query("FETCH?"))
         Resistance = float(self.Vmeter.query("READ?"))
+        #Resistance = float(self.Vmeter.query("MEAS:RES? AUTO,MIN"))
         self.checkStatus()
         self.Relay.write("*RST")
         return Resistance
