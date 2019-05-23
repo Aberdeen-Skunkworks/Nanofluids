@@ -94,6 +94,32 @@ class THW:
             self.verifyDA(2)
 
         self.checkStatus()
+    def ReadSenseR(self):
+        self.ser = serial.Serial('com4', 9600, timeout=2)
+        #Switch the wire on instead of the dummy load
+        self.IMeterSlowConf()
+        self.ser.write(b'4')
+        self.DA.write("CURR2 0.0") #Put 0mA through the wires
+        self.Relay.write("CLOS (@100,190)")
+        self.Vmeter.write("*RST")
+        self.Vmeter.write("*RCL 0")
+        self.Vmeter.write("CAL:ZERO:AUTO ON")
+        self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
+        time.sleep(0.001)
+        I0 = float(self.Imeter.query("READ?").strip())
+        V0=float(self.Vmeter.query("READ?"))
+        print("Voffset=",V0,"Icurr=",I0)
+        self.DA.write("CURR2 0.001") #Put 1mA through the wires
+        time.sleep(0.001)
+        IR = float(self.Imeter.query("READ?").strip())
+        VR=float(self.Vmeter.query("READ?"))
+        print("Vcurr=",VR,"Icurr=",IR)
+        print("R=",(VR-V0)/(IR-I0))
+        self.Relay.write("*RST")
+        self.ser.write(b'0')
+        self.ser.close()
+
+        self.checkStatus()
         
     def Temptest(self):
         # Now we can check the voltmeter is wired correctly
@@ -121,7 +147,7 @@ class THW:
             B = -5.775E-7
             #C = -4.183E-12
             Ro = 100
-            Temp = (-Ro*A)+math.sqrt(Ro**2 * A**2 - 4 * Ro * B * (Ro - ProbeRES))  / (2*Ro*B)
+            Temp = ((-Ro*A)+math.sqrt(Ro**2 * A**2 - 4 * Ro * B * (Ro - ProbeRES)))  / (2*Ro*B)
             return Temp
         
         def Long_HW_Solve(Temp, Res):
@@ -159,7 +185,7 @@ class THW:
         for i,chan in enumerate([[113,111,191,192], [114,111,191,192], [110,111,191,192], [109,111,191,192], [112,111,191,192], [103,111,190,191]]):
             val = self.FourWire(chan)
             ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
-            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val))
+            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1200.0))
         
         val = self.FourWire([107, 115, 190, 191])
         RTD_Temp = RTD_Solve(val)
@@ -171,11 +197,14 @@ class THW:
         
         val = self.FourWire([105, 108, 190, 191])
         Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
-        print("Long HW Temp:", Long_HW_Temp)              
+        print("Long HW Temp:", Long_HW_Temp) 
         
     def FourWire(self, channels):
         #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
         self.Relay.write("CLOS (@"+",".join(map(str,channels))+")")
+        #print(self.Relay.query("CLOSE? (@100:115,190,191,192)").strip())
+        #print(channels)
+        #time.sleep(0.02)
         # Load the four wire resistance measurement, add a delay for the meters and take the reading
         self.Vmeter.write("*RST")
         self.Vmeter.write("*RCL 0")

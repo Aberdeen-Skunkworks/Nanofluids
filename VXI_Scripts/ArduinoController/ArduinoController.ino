@@ -7,7 +7,7 @@
 #define PressurePin 8
 #define ledPin 13 //builtin LED
 
-enum State : uint8_t { STAND_BY = 1, INIT, RUN, SEND_DATA, BALANCE };
+enum State : uint8_t { STAND_BY = 1, IDLE_MODE, WIRE_ON, INIT, RUN, SEND_DATA, BALANCE };
 State THW = STAND_BY;
 
 char rx_byte;
@@ -51,6 +51,8 @@ void loop() {
       THW = SEND_DATA;
    }else if ((rx_byte == '3')) {
       THW = BALANCE;
+   }else if ((rx_byte == '4')) {
+      THW = WIRE_ON;
    }else {
       Serial.print(rx_byte);
       Serial.println(" is not a valid command.");
@@ -58,11 +60,18 @@ void loop() {
   }
 
    switch(THW){
+    case IDLE_MODE:
+      break;
+    case WIRE_ON:
+      digitalWrite(Power, HIGH);
+      digitalWrite(FET1, LOW);    
+      break;
     case STAND_BY:
       digitalWrite(ledPin, HIGH);
       digitalWrite(ReadTrig, HIGH);
       digitalWrite(Power, LOW);
       digitalWrite(FET1, HIGH);
+      THW=IDLE_MODE;
       break;
     case INIT:
       PowerCheck = 0;
@@ -126,10 +135,10 @@ void loop() {
       }
       
       THW = STAND_BY;
-      
       break;
     case BALANCE:
       digitalWrite(Power, HIGH);
+      THW=IDLE_MODE;
       break;
    }
 }
