@@ -11,9 +11,13 @@ import time
 import math
 from scipy.optimize import fsolve
 
+gpib = 0
+
 class Instrument():
+    '''This class adds automatic error checking to pyvisa write/query commands and also adds some common VXI/SCPI commands as class methods.'''
     def __init__(self, name, rm, address, full_test, visa_timeout_time=5000, visa_chunk_size=102400):
         self.name = name
+        self.full_test = full_test
         self.resource = rm.open_resource(address)
         #Timeout needs to be long enough for some of the slow devices to respond
         self.resource.timeout = visa_timeout_time
@@ -21,40 +25,105 @@ class Instrument():
         self.resource.chunk_size = visa_chunk_size
         
     def query(self, cmd):
+        '''Send a SCPI query and test/capture any instrument errors'''
         retval = None
         try:
             retval = self.resource.query(cmd)
-            pass
         except Exception as e:
+            #If the command fails/timeouts, check for errors
             raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
-        except:
-            raise Exception("!!!")
-        
+        #If it succeeds, still check for errors
         self.check_errors()
         return retval
     
     def write(self, cmd):
-        retval = self.resource.write(cmd)
+        '''Send a SCPI write and test/capture any instrument errors'''
+        try:
+            self.resource.write(cmd)
+        except Exception as e:
+            #If the command fails/timeouts, check for errors
+            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
+        #If it succeeds, still check for errors
         self.check_errors()
-        return retval
     
     def get_errors(self):
-        '''Checks the status bytes of the device to see if any are in an error state'''
-        error=""
+        '''Get a list of errors of the device, if there's no error return an empty list'''
+        errors=[]
         while True:
-            errcode,errstring = self.resource.query("SYSTEM:ERROR?").split(",")
-            if int(errcode) == 0:
+            errcode, errstring = self.resource.query("SYSTEM:ERROR?").split(",")
+            errcode = int(errcode)
+            if errcode == 0:
+                #This isn't an error, all is fine so stop parsing here
                 break
-            error=error+' '+errcode+":"+errstring.strip()
-        return error
+            errors.append([errcode, errstring])
+        #Finally, we clear the instrument status if its errored
+        if len(errors) != 0:
+            self.resource.write("*CLS")
+        return errors
     
     def check_errors(self):
-        error = self.get_errors()
-        if error != "":
-            raise Exception(self.name+": Error "+error)
+        '''Checks if the instrument has any errors and, if so, raises an exception'''
+        errors = self.get_errors()
+        if len(errors) != 0:
+            raise Exception(self.name+": Errors "+str(errors))
+            
+    ######## SCPI command helpers
+    def reset(self):
+        self.write("*RST")
+        
+from enum import Enum
+class MuxChannels(Enum):
+    CURRENT_RESISTOR = 100
+    SHORT_WIRE = 101
+    POTENTIOMETER_1 = 102
+    THERMISTOR_6 = 103
+    BRIDGE = 104
+    LONG_WIRE = 105
+    POTENTIOMETER_2 = 106
+    RTD_SENSE = 107
+    WIRE_POWER = 108
+    THERMISTOR_4 = 109
+    THERMISTOR_3 = 110
+    THERMISTOR_POWER = 111
+    THERMISTOR_5 = 112
+    THERMISTOR_1 = 113
+    THERMISTOR_2 = 114
+    RTD_POWER = 115
+    
+        #Voltage/A tree
+        ##R_current - CH 0 !
+        ##Short_HW_sense - CH 1 G
+        ##POT_1 - CH 2 ?
+        #PT_6 - CH 3 G
+        ##WB_sense - CH 4 
+        ##Long_HW_Sense - CH 5 G
+        ##POT_2 - CH 6 ?
+        #RTD_Probe_Sense - CH 7 G
+        
+        #Current/B tree
+        #WB_Power - CH 8 G (by def)
+        #PT_4 - CH 9 G
+        #PT_3 - CH 10 G
+        #PT_Power - CH 11 G
+        #PT_5 - CH 12 G
+        #PT_1 - CH 13 G
+        #PT_2 - CH 14 G
+        #RTD_Probe_Power - CH 15 G
 
+
+class RelayMux(Instrument):
+    def __init__(self, rm, full_test, visa_timeout_time):
+        super().__init__("RelayMux", rm, 'GPIB'+str(gpib)+'::9::4::INSTR', full_test, visa_timeout_time)
+    
+    def getClosedRelays(self):
+        closed = list(map(int, self.query("CLOSE? (@100:115,190,191,192)").strip().split(',')))
+        return closed
+    
+    def closeRelays(self, channels):
+        self.write("CLOS (@"+",".join(map(str, channels))+")")
+            
 class THW:
-    def __init__(self, reset_rack = False, full_test = False, gpib = 0, serialport = 'com4'):
+    def __init__(self, reset_rack = False, full_test = False, serialport = 'com4'):
         #Set the teensy to its default state
         self.ser = serial.Serial(serialport, 9600, timeout=2)
         self.ser.write(b'0')
@@ -77,7 +146,7 @@ class THW:
         #E1328A Digital analogue converter
         self.DA = Instrument("DA", self.rm, 'GPIB'+str(gpib)+'::9::6::INSTR', full_test, visa_timeout_time)
         #E1345A Relay mux
-        self.Relay = Instrument("RelayMux", self.rm, 'GPIB'+str(gpib)+'::9::4::INSTR', full_test, visa_timeout_time)
+        self.Relay = RelayMux(self.rm, full_test, visa_timeout_time)
         
  
         #Force the rack to reset itself (useful if the meters have become locked up due to misuse)
@@ -103,7 +172,7 @@ class THW:
         #Checking the meter manual, the current supplied ranges from 488uA (256Ohm) to 7.6uA (1048576Ohm) (pg 87)
         #Note that the manual incorrectly states 488mA, but the datasheet states 488uA or 11.5V.
         #Resolution at 320ms/16 NPLC is 61uOhm for 232Ohm, 488uOhm for 1861 Ohm, and 3.9mOhm for 14894Ohm, 31.2mOhm for 119156Ohm
-        self.Vmeter.write("CONF:FRES 14894,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
+        self.Vmeter.write("CONF:FRES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
         #self.Vmeter.write("CONF:RES AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
         #AUTO range increases measurement time by 150ms but guarantees the best range is used
         #self.Vmeter.write("RES:NPLC 16") #16 NLPC
@@ -202,30 +271,11 @@ class THW:
             A_s = 35.62074654189631
             return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
         
-        #Voltage tree
-        ##R_current - CH 0
-        ##Short_HW_sense - CH 1
-        ##POT_1 - CH 2
-        #PT_6 - CH 3
-        ##WB_sense - CH 4
-        ##Long_HW_Sense - CH 5
-        ##POT_2 - CH 6
-        #RTD_Probe_Sense - CH 7
-        
-        #Current tree
-        #WB_Power - CH 8
-        #PT_4 - CH 9
-        #PT_3 - CH 10
-        #PT_Power - CH 11
-        #PT_5 - CH 12
-        #PT_1 - CH 13
-        #PT_2 - CH 14
-        #RTD_Probe_Power - CH 15
-        
+        #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
         for i,chan in enumerate([[113,111,191,192], [114,111,191,192], [110,111,191,192], [109,111,191,192], [112,111,191,192], [103,111,190,191]]):
             val = self.FourWire(chan)
             ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
-            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1200.0))
+            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1206.323))
         
         val = self.FourWire([107, 115, 190, 191])
         RTD_Temp = RTD_Solve(val)
@@ -240,11 +290,8 @@ class THW:
         print("Long HW R=",val,"Temp:", Long_HW_Temp) 
         
     def FourWire(self, channels):
-        #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
-        self.Relay.write("CLOS (@"+",".join(map(str,channels))+")")
-        #print(self.Relay.query("CLOSE? (@100:115,190,191,192)").strip())
-        #print(channels)
-        #time.sleep(0.02)
+
+        self.Relay.closeRelays(channels)
         # Load the four wire resistance measurement, add a delay for the meters and take the reading
         self.Vmeter.write("*RST")
         self.Vmeter.write("*RCL 0")
@@ -255,7 +302,7 @@ class THW:
         #self.Vmeter.write("TRIG")
         #Resistance = float(self.Vmeter.query("FETCH?"))
         Resistance = float(self.Vmeter.query("READ?"))
-        #Resistance = float(self.Vmeter.query("MEAS:RES? AUTO,MIN"))
+        #Resistance = float(self.Vmeter.query("MEAS:RES? AUTO,MIN,(@100)"))
         self.checkStatus()
         self.Relay.write("*RST")
         return Resistance
