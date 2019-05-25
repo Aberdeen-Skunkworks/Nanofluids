@@ -71,45 +71,45 @@ class Instrument():
     def reset(self):
         self.write("*RST")
         
-from enum import Enum
-class MuxChannels(Enum):
-    CURRENT_RESISTOR = 100
-    SHORT_WIRE = 101
-    POTENTIOMETER_1 = 102
-    THERMISTOR_6 = 103
-    BRIDGE = 104
-    LONG_WIRE = 105
-    POTENTIOMETER_2 = 106
-    RTD_SENSE = 107
-    WIRE_POWER = 108
-    THERMISTOR_4 = 109
-    THERMISTOR_3 = 110
-    THERMISTOR_POWER = 111
-    THERMISTOR_5 = 112
-    THERMISTOR_1 = 113
-    THERMISTOR_2 = 114
-    RTD_POWER = 115
-    
-        #Voltage/A tree
-        ##R_current - CH 0 !
-        ##Short_HW_sense - CH 1 G
-        ##POT_1 - CH 2 ?
-        #PT_6 - CH 3 G
-        ##WB_sense - CH 4 
-        ##Long_HW_Sense - CH 5 G
-        ##POT_2 - CH 6 ?
-        #RTD_Probe_Sense - CH 7 G
-        
-        #Current/B tree
-        #WB_Power - CH 8 G (by def)
-        #PT_4 - CH 9 G
-        #PT_3 - CH 10 G
-        #PT_Power - CH 11 G
-        #PT_5 - CH 12 G
-        #PT_1 - CH 13 G
-        #PT_2 - CH 14 G
-        #RTD_Probe_Power - CH 15 G
+from enum import Enum, unique
 
+@unique
+class MuxChannels(Enum):
+    #A/VOLTAGE TREE
+    CURRENT_RESISTOR = 0
+    SHORT_WIRE = 1
+    POTENTIOMETER_1 = 2
+    THERMISTOR_6 = 3
+    WS_BRIDGE = 4
+    LONG_WIRE = 5
+    POTENTIOMETER_2 = 6
+    RTD_SENSE = 7
+    #B/CURRENT/SENSE TREE
+    WSB_POWER = 8 
+    THERMISTOR_4 = 9 #10K Thermistor
+    THERMISTOR_3 = 10
+    THERMISTOR_POWER = 11
+    THERMISTOR_5 = 12
+    THERMISTOR_1 = 13
+    THERMISTOR_2 = 14
+    RTD_POWER = 15
+
+def driveChannels():
+        return {
+            MuxChannels.CURRENT_RESISTOR : MuxChannels.WSB_POWER,
+            MuxChannels.SHORT_WIRE : MuxChannels.WSB_POWER,
+            MuxChannels.WS_BRIDGE : MuxChannels.WSB_POWER,
+            MuxChannels.LONG_WIRE : MuxChannels.WSB_POWER,
+            MuxChannels.POTENTIOMETER_1 : MuxChannels.WSB_POWER,
+            MuxChannels.POTENTIOMETER_2 : MuxChannels.WSB_POWER,
+            MuxChannels.THERMISTOR_1 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_2 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_3 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_4 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_5 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_6 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.RTD_SENSE : MuxChannels.RTD_POWER,
+            }
 
 class RelayMux(Instrument):
     def __init__(self, rm, full_test, visa_timeout_time):
@@ -121,7 +121,36 @@ class RelayMux(Instrument):
     
     def closeRelays(self, channels):
         self.write("CLOS (@"+",".join(map(str, channels))+")")
-            
+        
+    def isTrueFourWire(self, sense, drive):
+        '''Returns true if the mux channels can be driven in 4 wire mode'''
+        return sense.value < 7 and drive.value > 8
+    
+    def twowire_channels(self, sense):
+        if not 0 <= sense.value <= 15:
+            raise Exception(str(sense)+" is not a valid channel number")
+
+        channels = [100+sense.value]
+        if sense.value < 8: #Sense channel is in A tree
+            channels.append(190) # Enable the AT Tree Switch to link A tree with meter H L
+        else: #Sense channel is in B tree
+            channels.append(192) # Enable the AT2 Tree Switch to link B tree with meter H L
+        return channels
+    
+    def fourwire_channels(self, sense):
+        if sense not in driveChannels():
+            raise Exception(str(sense)+" has no allocated drive channel on the mux")
+        
+        drive = driveChannels()[sense]
+
+        if not 8 <= drive.value <= 15:
+            raise Exception(str(drive)+" is not in the B tree, cannot use it as a drive line!")
+
+        return self.twowire_channels(sense)+[100+drive.value, 191] #191 is the BT Tree switch
+      
+    def fourwire(self, sense):
+        self.closeRelays(self.fourwire_channels(sense))
+        
 class THW:
     def __init__(self, reset_rack = False, full_test = False, serialport = 'com4'):
         #Set the teensy to its default state
@@ -272,37 +301,29 @@ class THW:
             return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
         
         #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
-        for i,chan in enumerate([[113,111,191,192], [114,111,191,192], [110,111,191,192], [109,111,191,192], [112,111,191,192], [103,111,190,191]]):
-            val = self.FourWire(chan)
+        for muxchan in [MuxChannels.THERMISTOR_1,MuxChannels.THERMISTOR_2,MuxChannels.THERMISTOR_3,MuxChannels.THERMISTOR_4,MuxChannels.THERMISTOR_5,MuxChannels.THERMISTOR_6]:
+            val = self.FourWire(muxchan)
             ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
-            print("Thermistor",i," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1206.323))
+            print(muxchan," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1206.323))
         
-        val = self.FourWire([107, 115, 190, 191])
+        val = self.FourWire(MuxChannels.RTD_SENSE)
         RTD_Temp = RTD_Solve(val)
         print("PT100 probe R=",val,"temp:", RTD_Temp)
         
-        val = self.FourWire([101, 108, 190, 191])
+        val = self.FourWire(MuxChannels.SHORT_WIRE)
         Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
         print("Short HW R=",val,"Temp:", Short_HW_Temp)
         
-        val = self.FourWire([105, 108, 190, 191])
+        val = self.FourWire(MuxChannels.LONG_WIRE)
         Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
         print("Long HW R=",val,"Temp:", Long_HW_Temp) 
         
-    def FourWire(self, channels):
-
-        self.Relay.closeRelays(channels)
+    def FourWire(self, muxchan):
+        self.Relay.fourwire(muxchan)
         # Load the four wire resistance measurement, add a delay for the meters and take the reading
         self.Vmeter.write("*RST")
         self.Vmeter.write("*RCL 0")
-        #self.Vmeter.write("TRIG:DELAY 0.2;:TRIG:SOURCE HOLD;") #Tell the meter be triggered immediately when INITialise'd        
-        #self.Vmeter.write("TRIG:DELAY 0.2")
-        #self.Vmeter.write("TRIG:SOURCE HOLD")
-        #self.Vmeter.write("INIT")
-        #self.Vmeter.write("TRIG")
-        #Resistance = float(self.Vmeter.query("FETCH?"))
         Resistance = float(self.Vmeter.query("READ?"))
-        #Resistance = float(self.Vmeter.query("MEAS:RES? AUTO,MIN,(@100)"))
         self.checkStatus()
         self.Relay.write("*RST")
         return Resistance
