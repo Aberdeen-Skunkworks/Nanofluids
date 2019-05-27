@@ -122,9 +122,15 @@ class RelayMux(Instrument):
     def closeRelays(self, channels):
         self.write("CLOS (@"+",".join(map(str, channels))+")")
         
-    def isTrueFourWire(self, sense, drive):
+    def isTrueFourWire(self, sense):
         '''Returns true if the mux channels can be driven in 4 wire mode'''
-        return sense.value < 7 and drive.value > 8
+        if not 0 <= sense.value <= 15:
+            raise Exception(str(sense)+" is not a valid channel number")
+        if sense not in driveChannels():
+            raise Exception(str(sense)+" has no allocated drive channel on the mux")
+        drive = driveChannels()[sense]
+        
+        return sense.value <= 7 and drive.value >= 8
     
     def twowire_channels(self, sense):
         if not 0 <= sense.value <= 15:
@@ -232,6 +238,8 @@ class THW:
             self.verifyDA(2)
 
         self.checkStatus()
+    
+    
     def ReadSenseR(self):
         self.ser = serial.Serial('com4', 9600, timeout=2)
         #Switch the wire on instead of the dummy load
@@ -260,19 +268,29 @@ class THW:
         self.checkStatus()
         
     def Temptest(self):
-        # Now we can check the voltmeter is wired correctly
-        
-        # find temp of cell and wires
-        # 
         # Thermistor 1, 2, 3, 5,6 is  TFPT0805L1201FV TFPT0805 Linear 120x10^1=1200 Ohm ?F=+-1% V #Lead-free 1000pcs
         # Thermistor 4 is TFPT1206L1002FV TFPT1206 Linear 100*10^2=10k Ohm ?F=+-1% V #Lead-free 1000pcs
         #http://www.vishay.com/docs/33017/tfpt.pdf 
-        def ThermistorSolve(T, R, Rref=1206.323):  # PT_6
-            return Rref*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3)) - R
+        def Thermistor_TtoR(T, Rref=1200):  # PT_6
+            return Rref*(9.0014E-1 + (3.87235E-3 * T) + (4.86825E-6 * T**2) + (1.37559E-9 * T**3))
        
-        def ThermistorT(R, Rref=1206.323):
+        def Thermistor_RtoT(R, Rref=1206.323):
             return 28.54 * (R/Rref)**3 - 158.5*(R/Rref)**2 + 474.8 * (R/Rref) - 319.85
         #Get the table of ratio tolerances digitized
+        
+        def Thermistor_tol(T):
+            if 12 <= T <= 40:
+                return 0.005
+            elif 0 <= T <= 55:
+                return 0.01
+            elif -20 <= T <= 85:
+                return 0.02
+            elif -40 <= T <= 125:
+                return 0.03
+            elif -55 <= T <= 150:
+                return 0.04
+            else:
+                raise Exception("Out of range")
         
         #Our probe is this
         #https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
@@ -280,14 +298,19 @@ class THW:
         #This means the alpha is 0.00385 
         #Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
         #We can use the Callendar-Van Dusen expression to calculate T
-        def RTD_Solve(ProbeRES):
-            A = 3.908E-3
+        #
+        # Here's a definition via the ITS-90 versus the IPTS-68
+        #http://www.code10.info/index.php%3Foption%3Dcom_content%26view%3Darticle%26id%3D82:measuring-temperature-platinum-resistance-thermometers%26catid%3D60:temperature%26Itemid%3D83
+        def RTD_RtoT(R, R0=100):
+            A = 3.9083E-3
             B = -5.775E-7
-            #C = -4.183E-12
-            Ro = 100
-            Temp = ((-Ro*A)+math.sqrt(Ro**2 * A**2 - 4 * Ro * B * (Ro - ProbeRES)))  / (2*Ro*B)
+            C = -4.183E-12
+            Temp = (-R0 * A + math.sqrt(R0**2 * A**2 - 4 * R0 * B * (R0 - R)))  / (2 * R0 * B)
             return Temp
         
+        #Our wire lengths are 89.50mm and 60.50mm from pad end to pad end, and 0.015mm diameter
+        #Short and Long resistances per length should be within 2% (pg 463 NIST THW)
+        #More callendar-Van Dusen equations
         def Long_HW_Solve(Temp, Res):
             C_l = 5.719122779371328e-05
             B_l = 0.2005214939916926
@@ -299,24 +322,46 @@ class THW:
             B_s = 0.1385312594407914811
             A_s = 35.62074654189631
             return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
+
+        sources = [
+                (MuxChannels.THERMISTOR_1, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                (MuxChannels.THERMISTOR_2, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                (MuxChannels.THERMISTOR_3, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                (MuxChannels.THERMISTOR_4, lambda R : Thermistor_RtoT(R, Rref=10000.0)),
+                (MuxChannels.THERMISTOR_5, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                (MuxChannels.THERMISTOR_6, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                (MuxChannels.RTD_SENSE, RTD_RtoT),
+                (MuxChannels.SHORT_WIRE, lambda R : fsolve(lambda T : 35.62074654189631 + 0.1385312594407914811 * T + 2.861284460413907e-05 * T**2 - R, 0)[0]),
+                (MuxChannels.LONG_WIRE, lambda R :  fsolve(lambda T : 52.235976794620974 + 0.2005214939916926 * T + 5.719122779371328e-05 * T**2 - R, 0)[0])
+                ]
         
-        #Close 90 (AT Tree Switch) and 91 (BT Tree Switch) of card 1. This connects the trees to the analogue bus in 4 wire mode
-        for muxchan in [MuxChannels.THERMISTOR_1,MuxChannels.THERMISTOR_2,MuxChannels.THERMISTOR_3,MuxChannels.THERMISTOR_4,MuxChannels.THERMISTOR_5,MuxChannels.THERMISTOR_6]:
-            val = self.FourWire(muxchan)
-            ThermistorTemp = fsolve(ThermistorSolve, 0, float(val))[0]
-            print(muxchan," R=",val," Temp:", ThermistorTemp, " Temp2:", ThermistorT(val, 1206.323))
         
-        val = self.FourWire(MuxChannels.RTD_SENSE)
-        RTD_Temp = RTD_Solve(val)
-        print("PT100 probe R=",val,"temp:", RTD_Temp)
+        log = open("T.log", "a+")
+        print("# Time", file=log, sep="", end=",") #print header
+        for muxchan, RtoT in sources:
+            print(muxchan," Resistance", file=log, sep="", end=",")
+            print(muxchan," T", file=log, sep="", end=",")
+        print("",file=log, sep="", end="\n")
+        log.close()
         
-        val = self.FourWire(MuxChannels.SHORT_WIRE)
-        Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
-        print("Short HW R=",val,"Temp:", Short_HW_Temp)
+        while True:
+            log = open("T.log", "a+")
+            print(time.strftime("%X %x"), file=log, sep="", end=",")
+            for muxchan, RtoT in sources:
+                R = self.FourWire(muxchan)
+                print(repr(R),repr(RtoT(R)), file=log, sep=",", end=",")
+                if muxchan == MuxChannels.RTD_SENSE:
+                    print(time.strftime("%X %x"), sep="", end=",")
+                    print(repr(R), repr(RtoT(R)), sep=",")
+            print("",file=log, sep="", end="\n")
+            log.close()
+        #val = self.FourWire(MuxChannels.SHORT_WIRE)
+        #Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
+        #print("Short HW R=",val,"Temp:", Short_HW_Temp)
         
-        val = self.FourWire(MuxChannels.LONG_WIRE)
-        Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
-        print("Long HW R=",val,"Temp:", Long_HW_Temp) 
+        #val = self.FourWire(MuxChannels.LONG_WIRE)
+        #Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
+        #print("Long HW R=",val,"Temp:", Long_HW_Temp) 
         
     def FourWire(self, muxchan):
         self.Relay.fourwire(muxchan)
