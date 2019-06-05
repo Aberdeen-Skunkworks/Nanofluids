@@ -11,14 +11,22 @@ import serial
 import time
 import math
 from scipy.optimize import fsolve
+import numpy as np
+import matplotlib.pyplot as plt
+import serial.tools.list_ports
+from matplotlib.lines import Line2D
+import matplotlib.animation as animation
+from scipy.optimize import fsolve
+
 
 gpib = 0
 
 class Instrument():
     '''This class adds automatic error checking to pyvisa write/query commands and also adds some common VXI/SCPI commands as class methods.'''
-    def __init__(self, name, rm, address, full_test, visa_timeout_time=5000, visa_chunk_size=102400):
+    def __init__(self, name, rm, address, full_test, visa_timeout_time=5000, visa_chunk_size=102400, no_check_commands=[]):
         self.name = name
         self.full_test = full_test
+        self.no_check_commands = no_check_commands #Commands which lock-up or reset the instrument, so checking for errors doesn't work
         self.resource = rm.open_resource(address)
         #Timeout needs to be long enough for some of the slow devices to respond
         self.resource.timeout = visa_timeout_time
@@ -34,7 +42,8 @@ class Instrument():
             #If the command fails/timeouts, check for errors
             raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
         #If it succeeds, still check for errors
-        self.check_errors()
+        if cmd not in self.no_check_commands:
+            self.check_errors()
         return retval
     
     def write(self, cmd):
@@ -45,7 +54,8 @@ class Instrument():
             #If the command fails/timeouts, check for errors
             raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
         #If it succeeds, still check for errors
-        self.check_errors()
+        if cmd not in self.no_check_commands:
+            self.check_errors()
     
     def get_errors(self):
         '''Get a list of errors of the device, if there's no error return an empty list'''
@@ -78,18 +88,7 @@ class Instrument():
 
 class CommandModule(Instrument):
     def __init__(self, rm, full_test, visa_timeout_time):
-        super().__init__("CommandModule", rm, 'GPIB'+str(gpib)+'::9::0::INSTR', full_test, visa_timeout_time)
-    
-    def write(self, cmd):
-        '''Send a SCPI write and test/capture any instrument errors'''
-        try:
-            self.resource.write(cmd)
-        except Exception as e:
-            #If the command fails/timeouts, check for errors
-            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
-        #If it succeeds, still check for errors, but only if we didn't just reset the module
-        if not "DIAG:BOOT:COLD" and not "DIAG:BOOT:WARM" in cmd:
-            self.check_errors()
+        super().__init__("CommandModule", rm, 'GPIB'+str(gpib)+'::9::0::INSTR', full_test, visa_timeout_time, no_check_commands=["DIAG:BOOT:COLD", "DIAG:BOOT:WARM"])
 
 from enum import Enum, unique
 
@@ -173,12 +172,15 @@ class RelayMux(Instrument):
             raise Exception(str(drive)+" is not in the B tree, cannot use it as a drive line!")
 
         return self.twowire_channels(sense)+[100+drive.value, 191] #191 is the BT Tree switch
-      
+    
+    def twowire(self, sense):
+        self.closeRelays(self.twowire_channels(sense))        
+        
     def fourwire(self, sense):
         self.closeRelays(self.fourwire_channels(sense))
         
 class THW:
-    def __init__(self, reset_rack = False, full_test = False, serialport = 'com4'):
+    def __init__(self, reset_rack = False, full_test = False, serialport = 'com4', skip_cal=False):
         #Set the teensy to its default state
         self.ser = serial.Serial(serialport, 9600, timeout=2)
         self.ser.write(b'0')
@@ -195,9 +197,9 @@ class THW:
         #E1406A command module
         self.com = CommandModule(self.rm, full_test, visa_timeout_time)
         #E1411B 5.5 digit multimeter
-        self.Vmeter = Instrument("VMeter", self.rm, 'GPIB'+str(gpib)+'::9::23::INSTR', full_test, visa_timeout_time)
+        self.Vmeter = Instrument("VMeter", self.rm, 'GPIB'+str(gpib)+'::9::23::INSTR', full_test, visa_timeout_time, no_check_commands=["INIT"])
         #E1412A 6.5 digit multimeter
-        self.Imeter = Instrument("IMeter", self.rm, 'GPIB'+str(gpib)+'::9::3::INSTR', full_test, visa_timeout_time)
+        self.Imeter = Instrument("IMeter", self.rm, 'GPIB'+str(gpib)+'::9::3::INSTR', full_test, visa_timeout_time, no_check_commands=["INIT"])
         #E1328A Digital analogue converter
         self.DA = Instrument("DA", self.rm, 'GPIB'+str(gpib)+'::9::6::INSTR', full_test, visa_timeout_time)
         #E1345A Relay mux
@@ -254,11 +256,11 @@ class THW:
         self.checkStatus()
         
         #Now we calibrate the DA supply
-        self.calibrateDA(2)
-        if full_test:
-            self.verifyDA(2)
-
-        self.checkStatus()
+        if not skip_cal:
+            self.calibrateDA(2)
+            if full_test:
+                self.verifyDA(2)
+            self.checkStatus()
     
     
     def ReadSenseR(self):
@@ -402,14 +404,13 @@ class THW:
         self.Imeter.write("CAL:ZERO:AUTO ON") # Enable auto-zero
         self.Imeter.write("TRIG:SOUR IMM") # Ready to trigger immediately
         
-    def IMeterFastConf(self, range):
+    def IMeterFastConf(self, currentrange):
         self.Imeter.write("*RST")
         self.Imeter.write("CAL:LFR 50") #50hz line frequency for the UK
-        self.Imeter.write("CONF:CURR "+str(range)+",MAX") # 50mA range, max/fast resolution (worst) (should be 0.02 NPLC, so 2.5kHz)
+        self.Imeter.write("CONF:CURR "+str(currentrange)+",MAX") # 50mA range, max/fast resolution (worst) (should be 0.02 NPLC, so 2.5kHz)
         self.Imeter.write("CAL:ZERO:AUTO OFF") # Disable auto-zero
         self.Imeter.write("SAMP:COUN 500")
         self.Imeter.write("TRIG:SOUR EXT")
-        self.Imeter.write("TRIG:SLOP NEG")
         
     def calibrateDA(self, channel=2):
         '''Calibrate the output of the DA channel in current mode'''
@@ -478,29 +479,44 @@ class THW:
                 raise Exception("Device ", repr(dev), "returned failed test")
             print("OK!")
     
-    def runSingleWireTest(self, mA):
-        self.Vmeter.write("*RST")
-        self.Vmeter.write("*RCL 1")
+    def runSingleWireTest(self, current, sensechan):
+        self.Relay.twowire(sensechan)
+
+        self.DA.write("CURR2 "+str(current))  # Disable the current again
+
+        self.Vmeter.write("*RST") # Reset to power-on configuration again
+        self.Vmeter.write("CAL:LFR 50")  #Set the line frequenc
+        self.Vmeter.write("CONF:VOLT:DC 1, MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
+        self.Vmeter.write("CAL:ZERO:AUTO OFF") #Disable auto zero
+        self.Vmeter.write("SAMP:COUN 500") #Take 500 samples
+        self.Vmeter.write("SAMP:SOUR TIM") #Use the internal timer to drive the sampling
+        self.Vmeter.write("SAMP:TIM MIN")  #At the fastest timing possible (76us)
+        self.Vmeter.write("TRIG:SOUR EXT")
+        self.Vmeter.write("TRIG:SLOP NEG")
         self.Vmeter.write("INIT")
-        self.IMeterFastConf(mA)
+        self.IMeterFastConf(current)
         self.Imeter.write("INIT")
 
         result_array = []
         VMtime = []
         IMtime = []
         GetStatus = []
-        
+        print("Sleeping 1 second to let the DA output stabilise")
+        time.sleep(1)
+        print("Triggering the run")
         #Clear out what's been sent by the teensy already
         self.ser = serial.Serial('com4', 9600, timeout=2)
         self.ser.reset_input_buffer()
         self.ser.reset_output_buffer()
         self.ser.write(b'1')
-
+        
         print("Gathering Meter Data...")
         Vquery = self.Vmeter.query("FETC?")
         Iquery = self.Imeter.query("FETC?")
         voltage = -np.array(list(map(float, Vquery.split(','))))
         current = np.array(list(map(float, Iquery.split(','))))
+        
+        self.Relay.write("*RST")
         
         print("Meters Queried. Reading back data from the teensy")
 
@@ -548,7 +564,7 @@ class THW:
         print("Parsing current measurement times")
         readTeensyExpect("IMtime")
         IMtime = loadTeensyArray(IMreadings)        
-        ser.close()        
+        self.ser.close()        
         print("Teensy Data Recived and Sorted...")
 
         print("VM Time Array")

@@ -12,7 +12,7 @@ State THW = STAND_BY;
 
 char rx_byte;
 elapsedMicros Timer;
-const unsigned int PowerTimeStart = 40000; //10ms
+const unsigned int PowerTimeStart = 1000; //1ms
 const unsigned int PowerTime = 1000000; //2s
 const unsigned int numReadings = 1000;
 unsigned int VMtime[numReadings];
