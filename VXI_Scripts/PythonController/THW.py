@@ -6,6 +6,7 @@ Created on Fri May 17 13:35:00 2019
 """
 
 import visa
+from visa import VisaIOError
 import serial
 import time
 import math
@@ -50,7 +51,11 @@ class Instrument():
         '''Get a list of errors of the device, if there's no error return an empty list'''
         errors=[]
         while True:
-            errcode, errstring = self.resource.query("SYSTEM:ERROR?").split(",")
+            try:
+                errcode, errstring = self.resource.query("SYSTEM:ERROR?").split(",")
+            except VisaIOError as e:
+                #If the command fails/timeouts, check for errors
+                raise Exception("VisaIOError on "+self.name+"\nLeading to "+str(e))
             errcode = int(errcode)
             if errcode == 0:
                 #This isn't an error, all is fine so stop parsing here
@@ -70,7 +75,22 @@ class Instrument():
     ######## SCPI command helpers
     def reset(self):
         self.write("*RST")
-        
+
+class CommandModule(Instrument):
+    def __init__(self, rm, full_test, visa_timeout_time):
+        super().__init__("CommandModule", rm, 'GPIB'+str(gpib)+'::9::0::INSTR', full_test, visa_timeout_time)
+    
+    def write(self, cmd):
+        '''Send a SCPI write and test/capture any instrument errors'''
+        try:
+            self.resource.write(cmd)
+        except Exception as e:
+            #If the command fails/timeouts, check for errors
+            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
+        #If it succeeds, still check for errors, but only if we didn't just reset the module
+        if not "DIAG:BOOT:COLD" and not "DIAG:BOOT:WARM" in cmd:
+            self.check_errors()
+
 from enum import Enum, unique
 
 @unique
@@ -173,7 +193,7 @@ class THW:
         
         # set up communication with devices
         #E1406A command module
-        self.com = Instrument("CommandModule", self.rm, 'GPIB'+str(gpib)+'::9::0::INSTR', full_test, visa_timeout_time)
+        self.com = CommandModule(self.rm, full_test, visa_timeout_time)
         #E1411B 5.5 digit multimeter
         self.Vmeter = Instrument("VMeter", self.rm, 'GPIB'+str(gpib)+'::9::23::INSTR', full_test, visa_timeout_time)
         #E1412A 6.5 digit multimeter
@@ -189,6 +209,7 @@ class THW:
             print("Resetting VXI rack....wait 10s for them to come back")
             self.com.write("DIAG:BOOT:COLD")
             time.sleep(10)
+            print("Wait complete, continuing")
     
         if full_test:
             self.VXIselftest()
@@ -381,10 +402,10 @@ class THW:
         self.Imeter.write("CAL:ZERO:AUTO ON") # Enable auto-zero
         self.Imeter.write("TRIG:SOUR IMM") # Ready to trigger immediately
         
-    def IMeterFastConf(self):
+    def IMeterFastConf(self, range):
         self.Imeter.write("*RST")
         self.Imeter.write("CAL:LFR 50") #50hz line frequency for the UK
-        self.Imeter.write("CONF:CURR 0.05,MAX") # 50mA range, max/fast resolution (worst) (should be 0.02 NPLC, so 2.5kHz)
+        self.Imeter.write("CONF:CURR "+str(range)+",MAX") # 50mA range, max/fast resolution (worst) (should be 0.02 NPLC, so 2.5kHz)
         self.Imeter.write("CAL:ZERO:AUTO OFF") # Disable auto-zero
         self.Imeter.write("SAMP:COUN 500")
         self.Imeter.write("TRIG:SOUR EXT")
@@ -456,5 +477,132 @@ class THW:
             if result != 0:
                 raise Exception("Device ", repr(dev), "returned failed test")
             print("OK!")
+    
+    def runSingleWireTest(self, mA):
+        self.Vmeter.write("*RST")
+        self.Vmeter.write("*RCL 1")
+        self.Vmeter.write("INIT")
+        self.IMeterFastConf(mA)
+        self.Imeter.write("INIT")
+
+        result_array = []
+        VMtime = []
+        IMtime = []
+        GetStatus = []
+        
+        #Clear out what's been sent by the teensy already
+        self.ser = serial.Serial('com4', 9600, timeout=2)
+        self.ser.reset_input_buffer()
+        self.ser.reset_output_buffer()
+        self.ser.write(b'1')
+
+        print("Gathering Meter Data...")
+        Vquery = self.Vmeter.query("FETC?")
+        Iquery = self.Imeter.query("FETC?")
+        voltage = -np.array(list(map(float, Vquery.split(','))))
+        current = np.array(list(map(float, Iquery.split(','))))
+        
+        print("Meters Queried. Reading back data from the teensy")
+
+        def readTeensy():
+            raw_result = self.ser.readline()
+            if not raw_result:
+                raise Exception("Failed to receive reply from teensy")
+            return raw_result.decode('utf-8').replace("\r\n", "").strip()
+        
+        def readTeensyExpect(expected):
+            reply = readTeensy()
+            if reply != expected:     
+                raise Exception("Got unexpected teensy reply, expecting \"",expected,"\" but got \"", reply,"\"")
+
+        readTeensyExpect("PowerTimeStart")
+        PowerTimeStart = float(readTeensy())/1000
+        print("Power Time Start:", PowerTimeStart)
+
+        readTeensyExpect("PowerTime")
+        PowerTime = float(readTeensy())/1000
+        print("Power Time:", PowerTime)
+
+        
+        def loadTeensyArray(numreadings):
+            array = []
+            for i in range(numreadings):
+                reply = readTeensy()
+                try:
+                    value = float(reply)/1000
+                except:
+                    raise Exception("Expecting value but got ",repr(reply))
+                array.append(value)
+            return array
+    
+        readTeensyExpect("VMReadings")
+        VMreadings = int(readTeensy())
+        print("VMReadings:", VMreadings)
+        print("Parsing voltage measurement times")
+        readTeensyExpect("VMtime")
+        VMtime = loadTeensyArray(VMreadings)
+
+        readTeensyExpect("IMReadings")
+        IMreadings = int(readTeensy())
+        print("VMReadings:", IMreadings)
+        print("Parsing current measurement times")
+        readTeensyExpect("IMtime")
+        IMtime = loadTeensyArray(IMreadings)        
+        ser.close()        
+        print("Teensy Data Recived and Sorted...")
+
+        print("VM Time Array")
+        print(len(VMtime))
+
+        print("IM Time Array")
+        print(len(IMtime))
+
+        def writeArray(filename, array):
+            open(filename, "w").write(','.join(map(lambda x : repr(x), array)))
+        writeArray("vtime.txt", VMtime)
+        writeArray("itime.txt", IMtime)
+        writeArray("current.txt", current)
+        writeArray("voltage.txt", voltage)
+
+        print("Writing to files Completed... plotting")
+
+        if True:
+            fig = plt.figure()
+            ax1 = fig.add_subplot(1, 2, 1)
+            ax2 = fig.add_subplot(2, 2, 4)
+            ax = fig.add_subplot(2, 2, 2)
+
+            for i in VMtime:
+                ax.plot([i, i], [0, 1], 'b', lw=0.1)
+
+            for j in IMtime:
+                ax.plot([j,j], [0, 2], 'y', lw=0.1)
+
+            ax.plot([PowerTime+PowerTimeStart, PowerTime+PowerTimeStart], [0, 3], 'r', lw=1)
+            ax.plot([PowerTimeStart, PowerTime+PowerTimeStart], [3, 3], 'r', lw=1)
+            ax.plot([PowerTimeStart, PowerTimeStart], [0, 3], 'r', lw=1)
+
+            ax1.plot(VMtime, voltage, marker="o", linestyle="", markersize=1)
+            ax2.plot(IMtime, current, marker="o", linestyle="", markersize=1)
+
+            ax.set_yticklabels([])
+            ax.set_xticklabels([])
+
+            #ax1.set_ylim([-0.1,1])
             
+            ax.set_xlabel('Time (ms)')
+            ax.set_ylabel('')
+            ax1.set_xlabel('Time (ms)')
+            ax1.set_ylabel('Voltage (V)')
+            ax2.set_xlabel('Time (ms)')
+            ax2.set_ylabel('Current (I)')
+
+            custom_lines = [Line2D([0], [0], color='r', lw=4),
+                            Line2D([0], [0], color='y', lw=4),
+                            Line2D([0], [0], color='b', lw=4)]
+
+            ax.legend(custom_lines, ['Power Time', 'IM Complete', 'VM\
+ Complete'])
+
+            plt.show()
         
