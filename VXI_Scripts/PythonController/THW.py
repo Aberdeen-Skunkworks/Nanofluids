@@ -40,7 +40,7 @@ class Instrument():
             retval = self.resource.query(cmd)
         except Exception as e:
             #If the command fails/timeouts, check for errors
-            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
+            raise Exception("Instrument Errors: "+repr(self.get_errors())+"\nLeading to "+str(e))
         #If it succeeds, still check for errors
         if cmd not in self.no_check_commands:
             self.check_errors()
@@ -52,7 +52,7 @@ class Instrument():
             self.resource.write(cmd)
         except Exception as e:
             #If the command fails/timeouts, check for errors
-            raise Exception("Instrument Errors: "+self.get_errors()+"\nLeading to "+str(e))
+            raise Exception("Instrument Errors: "+repr(self.get_errors())+"\nLeading to "+str(e))
         #If it succeeds, still check for errors
         if cmd not in self.no_check_commands:
             self.check_errors()
@@ -80,7 +80,7 @@ class Instrument():
         '''Checks if the instrument has any errors and, if so, raises an exception'''
         errors = self.get_errors()
         if len(errors) != 0:
-            raise Exception(self.name+": Errors "+str(errors))
+            raise Exception(self.name+": Errors "+repr(errors))
             
     ######## SCPI command helpers
     def reset(self):
@@ -205,7 +205,9 @@ class THW:
         #E1345A Relay mux
         self.Relay = RelayMux(self.rm, full_test, visa_timeout_time)
         
- 
+        #There is a chance the meters have hung-up waiting for a trigger, so forces a trigger here to unlock them
+        with serial.Serial('com4', 9600, timeout=2) as self.ser:
+            self.ser.write(b'1')
         #Force the rack to reset itself (useful if the meters have become locked up due to misuse)
         if reset_rack:
             print("Resetting VXI rack....wait 10s for them to come back")
@@ -264,29 +266,28 @@ class THW:
     
     
     def ReadSenseR(self):
-        self.ser = serial.Serial('com4', 9600, timeout=2)
-        #Switch the wire on instead of the dummy load
-        self.IMeterSlowConf()
-        self.ser.write(b'4')
-        self.DA.write("CURR2 0.0") #Put 0mA through the wires
-        self.Relay.write("CLOS (@100,190)")
-        self.Vmeter.write("*RST")
-        self.Vmeter.write("*RCL 0")
-        self.Vmeter.write("CAL:ZERO:AUTO ON")
-        self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
-        time.sleep(0.001)
-        I0 = float(self.Imeter.query("READ?").strip())
-        V0=float(self.Vmeter.query("READ?"))
-        print("Voffset=",V0,"Icurr=",I0)
-        self.DA.write("CURR2 0.001") #Put 1mA through the wires
-        time.sleep(0.001)
-        IR = float(self.Imeter.query("READ?").strip())
-        VR=float(self.Vmeter.query("READ?"))
-        print("Vcurr=",VR,"Icurr=",IR)
-        print("R=",(VR-V0)/(IR-I0))
-        self.Relay.write("*RST")
-        self.ser.write(b'0')
-        self.ser.close()
+        with serial.Serial('com4', 9600, timeout=2) as self.ser:
+            #Switch the wire on instead of the dummy load
+            self.IMeterSlowConf()
+            self.ser.write(b'4')
+            self.DA.write("CURR2 0.0") #Put 0mA through the wires
+            self.Relay.write("CLOS (@100,190)")
+            self.Vmeter.write("*RST")
+            self.Vmeter.write("*RCL 0")
+            self.Vmeter.write("CAL:ZERO:AUTO ON")
+            self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
+            time.sleep(0.001)
+            I0 = float(self.Imeter.query("READ?").strip())
+            V0=float(self.Vmeter.query("READ?"))
+            print("Voffset=",V0,"Icurr=",I0)
+            self.DA.write("CURR2 0.001") #Put 1mA through the wires
+            time.sleep(0.001)
+            IR = float(self.Imeter.query("READ?").strip())
+            VR=float(self.Vmeter.query("READ?"))
+            print("Vcurr=",VR,"Icurr=",IR)
+            print("R=",(VR-V0)/(IR-I0))
+            self.Relay.write("*RST")
+            self.ser.write(b'0')
 
         self.checkStatus()
         
@@ -488,7 +489,7 @@ class THW:
         self.Vmeter.write("CAL:LFR 50")  #Set the line frequenc
         self.Vmeter.write("CONF:VOLT:DC 1, MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
         self.Vmeter.write("CAL:ZERO:AUTO OFF") #Disable auto zero
-        self.Vmeter.write("SAMP:COUN 500") #Take 500 samples
+        self.Vmeter.write("SAMP:COUN 5000") #Take 500 samples
         self.Vmeter.write("SAMP:SOUR TIM") #Use the internal timer to drive the sampling
         self.Vmeter.write("SAMP:TIM MIN")  #At the fastest timing possible (76us)
         self.Vmeter.write("TRIG:SOUR EXT")
@@ -496,89 +497,102 @@ class THW:
         self.Vmeter.write("INIT")
         self.IMeterFastConf(current)
         self.Imeter.write("INIT")
-
-        result_array = []
+        
         VMtime = []
         IMtime = []
-        GetStatus = []
         print("Sleeping 1 second to let the DA output stabilise")
         time.sleep(1)
         print("Triggering the run")
         #Clear out what's been sent by the teensy already
-        self.ser = serial.Serial('com4', 9600, timeout=2)
-        self.ser.reset_input_buffer()
-        self.ser.reset_output_buffer()
-        self.ser.write(b'1')
+        with serial.Serial('com4', 9600, timeout=2) as self.ser:
+            self.ser.reset_input_buffer()
+            self.ser.reset_output_buffer()
+            #below doesn't do anything
+            #self.ser.set_buffer_size(rx_size = 128000, tx_size = 128000)
+            self.ser.write(b'1')
         
-        print("Gathering Meter Data...")
-        Vquery = self.Vmeter.query("FETC?")
-        Iquery = self.Imeter.query("FETC?")
-        voltage = -np.array(list(map(float, Vquery.split(','))))
-        current = np.array(list(map(float, Iquery.split(','))))
+            #We grab VXI data first, as it might run out of mainframe memory
+            print("Gathering Meter Data...")
+            Vquery = self.Vmeter.query("FETC?")
+            Iquery = self.Imeter.query("FETC?")
+            voltage = -np.array(list(map(float, Vquery.split(','))))
+            current = np.array(list(map(float, Iquery.split(','))))
+            self.Relay.write("*RST")
+            print("Meters Queried.")
         
-        self.Relay.write("*RST")
+            def readTeensy():
+                raw_result = self.ser.readline()
+                if not raw_result:
+                    raise Exception("Failed to receive reply from teensy")
+                return raw_result.decode('utf-8').replace("\r\n", "").strip()
         
-        print("Meters Queried. Reading back data from the teensy")
-
-        def readTeensy():
-            raw_result = self.ser.readline()
-            if not raw_result:
-                raise Exception("Failed to receive reply from teensy")
-            return raw_result.decode('utf-8').replace("\r\n", "").strip()
-        
-        def readTeensyExpect(expected):
-            reply = readTeensy()
-            if reply != expected:     
-                raise Exception("Got unexpected teensy reply, expecting \"",expected,"\" but got \"", reply,"\"")
-
-        readTeensyExpect("PowerTimeStart")
-        PowerTimeStart = float(readTeensy())/1000
-        print("Power Time Start:", PowerTimeStart)
-
-        readTeensyExpect("PowerTime")
-        PowerTime = float(readTeensy())/1000
-        print("Power Time:", PowerTime)
-
-        
-        def loadTeensyArray(numreadings):
-            array = []
-            for i in range(numreadings):
+            def readTeensyExpect(expected):
                 reply = readTeensy()
-                try:
-                    value = float(reply)/1000
-                except:
-                    raise Exception("Expecting value but got ",repr(reply))
-                array.append(value)
-            return array
-    
-        readTeensyExpect("VMReadings")
-        VMreadings = int(readTeensy())
-        print("VMReadings:", VMreadings)
-        print("Parsing voltage measurement times")
-        readTeensyExpect("VMtime")
-        VMtime = loadTeensyArray(VMreadings)
+                if reply != expected:     
+                    raise Exception("Got unexpected teensy reply, expecting \"",expected,"\" but got \"", reply,"\"")
 
-        readTeensyExpect("IMReadings")
-        IMreadings = int(readTeensy())
-        print("VMReadings:", IMreadings)
-        print("Parsing current measurement times")
-        readTeensyExpect("IMtime")
-        IMtime = loadTeensyArray(IMreadings)        
-        self.ser.close()        
-        print("Teensy Data Recived and Sorted...")
+            readTeensyExpect("PowerTimeStart")
+            PowerTimeStart = float(readTeensy())/1000
+
+            readTeensyExpect("PowerTime")
+            PowerTime = float(readTeensy())/1000
+
+            print("Power Time Start:", PowerTimeStart)
+            print("Power Time:", PowerTime)
+
+        
+            def loadTeensyArray(numreadings):
+                array = []
+                for i in range(numreadings):
+                    reply = readTeensy()
+                    try:
+                        value = float(reply)/1000
+                    except:
+                        raise Exception("Expecting value but got ",repr(reply))
+                    array.append(value)
+                return array
+            
+            print("Downloading voltage measurements")
+            self.ser.write(b'2') #Request current readings
+            readTeensyExpect("VMReadings")
+            VMreadings = int(readTeensy())
+            print("VMReadings:", VMreadings)
+            print("Downloading...")
+            readTeensyExpect("VMtime")
+            VMtime = loadTeensyArray(VMreadings)
+            
+            print("Downloading current measurements")
+            self.ser.write(b'5') #Request current readings
+            readTeensyExpect("IMReadings")
+            IMreadings = int(readTeensy())
+            print("IMReadings:", IMreadings)
+            print("Downloading...")
+            readTeensyExpect("IMtime")
+            IMtime = loadTeensyArray(IMreadings)      
+            print("Teensy Data Recived and Sorted...")
+        
 
         print("VM Time Array")
         print(len(VMtime))
 
         print("IM Time Array")
         print(len(IMtime))
+        
+        def diffstats(array):
+            differences = [array[i] - array[i-1] for i in range(1,len(array))]
+            avg = sum(differences) / len(differences)
+            meansq = sum([x**2 for x in differences]) / len(differences)
+            return "%0.3fus±%0.3f =%0.0fHz"%(avg*1000,math.sqrt(meansq - avg*avg)*1000,1000/avg)
+        
+        print("Volt reading timing ", diffstats(VMtime))
+        print("Current reading timing ", diffstats(IMtime))
 
         def writeArray(filename, array):
             open(filename, "w").write(','.join(map(lambda x : repr(x), array)))
         writeArray("vtime.txt", VMtime)
         writeArray("itime.txt", IMtime)
-        writeArray("current.txt", current)
-        writeArray("voltage.txt", voltage)
+        writeArray("current.csv", current)
+        writeArray("voltage.csv", voltage)
 
         print("Writing to files Completed... plotting")
 

@@ -7,14 +7,14 @@
 #define PressurePin 8
 #define ledPin 13 //builtin LED
 
-enum State : uint8_t { STAND_BY = 1, IDLE_MODE, WIRE_ON, INIT, RUN, SEND_DATA, BALANCE };
+enum State : uint8_t { STAND_BY = 1, IDLE_MODE, WIRE_ON, INIT, RUN, SEND_VDATA, SEND_IDATA, BALANCE };
 State THW = STAND_BY;
 
 char rx_byte;
 elapsedMicros Timer;
 const unsigned int PowerTimeStart = 1000; //1ms
 const unsigned int PowerTime = 1000000; //2s
-const unsigned int numReadings = 1000;
+const unsigned int numReadings = 10000;
 unsigned int VMtime[numReadings];
 unsigned int IMtime[numReadings];
 unsigned int VMcounter;
@@ -48,11 +48,13 @@ void loop() {
    }else if ((rx_byte == '1')) {
       THW = INIT;
    }else if ((rx_byte == '2')) {
-      THW = SEND_DATA;
+      THW = SEND_VDATA;
    }else if ((rx_byte == '3')) {
       THW = BALANCE;
    }else if ((rx_byte == '4')) {
       THW = WIRE_ON;
+   }else if ((rx_byte == '5')) {
+      THW = SEND_IDATA;
    }else {
       Serial.print(rx_byte);
       Serial.println(" is not a valid command.");
@@ -109,31 +111,34 @@ void loop() {
       } 
 
       if (Timer > PowerTime){
-        THW = SEND_DATA;
+        THW = STAND_BY;
+        Serial.println("PowerTimeStart");
+        Serial.println(PowerTimeStart);
+        Serial.println("PowerTime");
+        Serial.println(PowerTime);
       }
       break;
-    case SEND_DATA:
-      Serial.println("PowerTimeStart");
-      Serial.println(PowerTimeStart);
+    case SEND_VDATA:
 
-      Serial.println("PowerTime");
-      Serial.println(PowerTime);
 
       Serial.println("VMReadings");
       Serial.println(VMcounter);
 
       Serial.println("VMtime");
       for (unsigned int n = 0; n < VMcounter; n++){
+        delay(1); //Delay to allow python time to process (so as to not run out of input buffer)
         Serial.println(VMtime[n]);
       }
-
+      THW = STAND_BY;
+      break;
+    case SEND_IDATA:
       Serial.println("IMReadings");
       Serial.println(IMcounter);
       Serial.println("IMtime");
       for (unsigned int i = 0; i< IMcounter; i++){
+        delay(1); //Delay to allow python time to process (so as to not run out of input buffer)
         Serial.println(IMtime[i]);
       }
-      
       THW = STAND_BY;
       break;
     case BALANCE:
