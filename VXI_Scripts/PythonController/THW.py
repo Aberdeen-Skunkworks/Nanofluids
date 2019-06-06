@@ -108,7 +108,8 @@ class MuxChannels(Enum):
     THERMISTOR_4 = 9 #10K Thermistor
     THERMISTOR_3 = 10
     THERMISTOR_POWER = 11
-    THERMISTOR_5 = 12
+    #THERMISTOR_5 = 12
+    BRIDGE_DA = 12
     THERMISTOR_1 = 13
     THERMISTOR_2 = 14
     RTD_POWER = 15
@@ -125,7 +126,7 @@ def driveChannels():
             MuxChannels.THERMISTOR_2 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_3 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_4 : MuxChannels.THERMISTOR_POWER,
-            MuxChannels.THERMISTOR_5 : MuxChannels.THERMISTOR_POWER,
+            #MuxChannels.THERMISTOR_5 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_6 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.RTD_SENSE : MuxChannels.RTD_POWER,
             }
@@ -257,12 +258,28 @@ class THW:
 
         self.checkStatus()
         
-        #Now we calibrate the DA supply
+        #Now we calibrate the DA I supply
         if not skip_cal:
-            self.calibrateDA(2)
+            self.calibrateDA_current(2)
             if full_test:
-                self.verifyDA(2)
+                self.verifyDA_current(2)
             self.checkStatus()
+            self.calibrateDA_voltage(3,MuxChannels.BRIDGE_DA)
+            if full_test:
+                self.verifyDA_voltage(3,MuxChannels.BRIDGE_DA)
+            self.checkStatus()
+        
+        
+        #CHECK THE R CURRENT RESISTANCE NOW
+        self.RCurrent = 99.95117
+        if full_test:
+            R = self.FourWire(MuxChannels.CURRENT_RESISTOR)
+            print("Current resistor value:",R,"Ohm...", end="")
+            if not 99.5 < R < 100.5:
+                raise Exception("RCurrent is out of bounds")
+            print("OK!")
+        #CHECK THE LONG WIRE IS 56.29
+        #SHORT WIRE
     
     
     def ReadSenseR(self):
@@ -272,16 +289,19 @@ class THW:
             self.ser.write(b'4')
             self.DA.write("CURR2 0.0") #Put 0mA through the wires
             self.Relay.write("CLOS (@100,190)")
+
             self.Vmeter.write("*RST")
             self.Vmeter.write("*RCL 0")
             self.Vmeter.write("CAL:ZERO:AUTO ON")
             self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
-            time.sleep(0.001)
+            self.Relay.query("*OPC?") #Ensure channel change is complete
+            self.DA.query("*OPC?") #Ensure voltage change is complete
             I0 = float(self.Imeter.query("READ?").strip())
             V0=float(self.Vmeter.query("READ?"))
             print("Voffset=",V0,"Icurr=",I0)
             self.DA.write("CURR2 0.001") #Put 1mA through the wires
-            time.sleep(0.001)
+            self.Relay.query("*OPC?") #Ensure channel change is complete
+            self.DA.query("*OPC?") #Ensure voltage change is complete
             IR = float(self.Imeter.query("READ?").strip())
             VR=float(self.Vmeter.query("READ?"))
             print("Vcurr=",VR,"Icurr=",IR)
@@ -291,7 +311,7 @@ class THW:
 
         self.checkStatus()
         
-    def Temptest(self):
+    def Temptest(self, logging=False):
         # Thermistor 1, 2, 3, 5,6 is  TFPT0805L1201FV TFPT0805 Linear 120x10^1=1200 Ohm ?F=+-1% V #Lead-free 1000pcs
         # Thermistor 4 is TFPT1206L1002FV TFPT1206 Linear 100*10^2=10k Ohm ?F=+-1% V #Lead-free 1000pcs
         #http://www.vishay.com/docs/33017/tfpt.pdf 
@@ -352,13 +372,19 @@ class THW:
                 (MuxChannels.THERMISTOR_2, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
                 (MuxChannels.THERMISTOR_3, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
                 (MuxChannels.THERMISTOR_4, lambda R : Thermistor_RtoT(R, Rref=10000.0)),
-                (MuxChannels.THERMISTOR_5, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                #(MuxChannels.THERMISTOR_5, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
                 (MuxChannels.THERMISTOR_6, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
                 (MuxChannels.RTD_SENSE, RTD_RtoT),
                 (MuxChannels.SHORT_WIRE, lambda R : fsolve(lambda T : 35.62074654189631 + 0.1385312594407914811 * T + 2.861284460413907e-05 * T**2 - R, 0)[0]),
                 (MuxChannels.LONG_WIRE, lambda R :  fsolve(lambda T : 52.235976794620974 + 0.2005214939916926 * T + 5.719122779371328e-05 * T**2 - R, 0)[0])
                 ]
         
+        
+        if not logging:
+            for muxchan, RtoT in sources:
+                R = self.FourWire(muxchan)
+                print(muxchan, repr(R),repr(RtoT(R)), sep=",")
+            return
         
         log = open("T.log", "a+")
         print("# Time", file=log, sep="", end=",") #print header
@@ -379,16 +405,11 @@ class THW:
                     print(repr(R), repr(RtoT(R)), sep=",")
             print("",file=log, sep="", end="\n")
             log.close()
-        #val = self.FourWire(MuxChannels.SHORT_WIRE)
-        #Short_HW_Temp = fsolve(Short_HW_Solve, 0, float(val))[0]
-        #print("Short HW R=",val,"Temp:", Short_HW_Temp)
-        
-        #val = self.FourWire(MuxChannels.LONG_WIRE)
-        #Long_HW_Temp = fsolve(Long_HW_Solve, 0, float(val))[0]
-        #print("Long HW R=",val,"Temp:", Long_HW_Temp) 
+
         
     def FourWire(self, muxchan):
         self.Relay.fourwire(muxchan)
+        self.Relay.query("*OPC?")
         # Load the four wire resistance measurement, add a delay for the meters and take the reading
         self.Vmeter.write("*RST")
         self.Vmeter.write("*RCL 0")
@@ -413,13 +434,13 @@ class THW:
         self.Imeter.write("SAMP:COUN 500")
         self.Imeter.write("TRIG:SOUR EXT")
         
-    def calibrateDA(self, channel=2):
+    def calibrateDA_current(self, channel=2):
         '''Calibrate the output of the DA channel in current mode'''
         channel = str(channel)
-        print("Calibrating DA channel "+channel)
+        print("Calibrating DA I channel "+channel+"...",end="")
         
         #Check the channel is configured for current
-        if self.DA.query("SOURCE:FUNCTION?").strip() != "CURR":
+        if self.DA.query("SOURCE:FUNCTION"+channel+"?").strip() != "CURR":
             raise Exception("Channel "+channel+" of the DA is not configured for current output!")
 
         #We want the current meter to be as accurate as possible
@@ -437,11 +458,12 @@ class THW:
         #Tell the DA the values so it can internally calibrate
         self.DA.write("CAL"+channel+":CURR "+minval+","+zeroval+","+maxval)
         self.DA.write("CAL"+channel+":STAT ON") #Enable calibration
-
-    def verifyDA(self, channel=2):
+        print("OK!")
+        
+    def verifyDA_current(self, channel=2):
         '''Verify the output of the channel is within 24 hour specs (0.05% of output + 7uA)'''
         channel = str(channel)
-        print("Verifying DA channel "+channel+" in specs")
+        print("Verifying DA I channel "+channel+" in specs...",end="")
         self.IMeterSlowConf()
         #Now verify calibration is within specifications
         self.DA.write("CURR"+channel+" MIN")  # Measure the minimum value
@@ -451,15 +473,72 @@ class THW:
         self.DA.write("CURR"+channel+" MAX")  # Measure max value
         maxval = float(self.Imeter.query("READ?").strip())
         self.DA.write("CURR"+channel+" DEF")  # Disable the current again
-        
-        print("DA"+channel+" cal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/0.02184+1)*100,float(zeroval)/0.02184*100,(float(maxval)/0.02184-1)*100))
+        #print("DA"+channel+" cal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/0.02184+1)*100,float(zeroval)/0.02184*100,(float(maxval)/0.02184-1)*100))
         if abs(minval+0.02184) > 0.0005*0.02184+7e-6:
             raise Exception("DA Channel "+channel+" min value is out of spec!")
         if abs(maxval-0.02184) > 0.0005*0.02184+7e-6:
             raise Exception("DA Channel "+channel+" max value is out of spec!")
         if abs(zeroval) > 7e-6:
             raise Exception("DA Channel "+channel+" zero value is out of spec!")
+        print("OK!")
+    
+    def calibrateDA_voltage(self, channel, sense):
+        #Calibrate the DA V supply
+        channel = str(channel)
+        self.Relay.twowire(sense)
+        self.Relay.query("*OPC?") #Ensure channel change is complete
+        print("Calibrating DA V channel "+channel+"...",end="")
         
+        #We want the voltage meter to be as accurate as possible
+        self.Vmeter.write("*RST") # Reset to power-on configuration again
+        self.Vmeter.write("CAL:LFR 50") #50hz line frequency for the UK
+        self.Vmeter.write("CONF:VOLT:DC AUTO,MIN") #Configure meter for the auto ranging, minimum resolution (best is min)
+        self.Vmeter.write("TRIG:SOUR IMM") #Tell the meter be triggered immediately when INITialise'd
+        
+        #Check the channel is configured for voltage output
+        if self.DA.query("SOURCE:FUNCTION"+channel+"?").strip() != "VOLT":
+            raise Exception("Channel "+channel+" of the DA is not configured for voltage output!")
+
+        # set up the DA into uncalibrated mode, then measure its min max and zero values
+        self.DA.write("CAL"+channel+":STAT OFF") # Disable calibration until its done
+        self.DA.write("VOLT"+channel+" MIN")  # Measure the minimum value
+        self.DA.query("*OPC?")  #Make sure the operation is complete
+        minval = self.Vmeter.query("READ?").strip()
+        self.DA.write("VOLT"+channel+" DEF")  # Measure the zero value
+        zeroval = self.Vmeter.query("READ?").strip()
+        self.DA.write("VOLT"+channel+" MAX")  # Measure max value
+        maxval = self.Vmeter.query("READ?").strip()
+        self.DA.write("VOLT"+channel+" DEF")  # Disable the voltage again
+        #print("DA"+channel+" uncal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/12.0+1)*100,float(zeroval)/12.0*100,(float(maxval)/12.0-1)*100))
+        #Tell the DA the values so it can internally calibrate
+        self.DA.write("CAL"+channel+":VOLT "+minval+","+zeroval+","+maxval)
+        self.DA.write("CAL"+channel+":STAT ON") #Enable calibration
+        self.Relay.write("*RST")
+        print("OK!")
+        
+    def verifyDA_voltage(self, channel, sense):
+        channel = str(channel)
+        print("Verifying DA V channel "+channel+" in specs...",end="")
+        #Now verify calibration is within specifications
+        self.Relay.twowire(sense)
+        self.Relay.query("*OPC?") #Ensure channel change is complete
+        self.DA.write("VOLT"+channel+" MIN")  # Measure the minimum value
+        minval = float(self.Vmeter.query("READ?").strip())
+        self.DA.write("VOLT"+channel+" DEF")  # Measure the zero value
+        zeroval = float(self.Vmeter.query("READ?").strip())
+        self.DA.write("VOLT"+channel+" MAX")  # Measure max value
+        maxval = float(self.Vmeter.query("READ?").strip())
+        self.DA.write("VOLT"+channel+" DEF")  # Disable the current again
+        self.Relay.write("*RST")
+        #print("DA"+channel+" cal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/10.922+1)*100,float(zeroval)/10.922*100,(float(maxval)/10.922-1)*100))
+        if abs(minval+10.922) > 0.0005*10.922+3.3e-3:
+            raise Exception("DA Channel "+channel+" min value is out of spec!")
+        if abs(maxval-10.922) > 0.0005*10.922+3.3e-3:
+            raise Exception("DA Channel "+channel+" max value is out of spec!")
+        if abs(zeroval) > 3.3e-3:
+            raise Exception("DA Channel "+channel+" zero value is out of spec!")
+        print("OK!")
+    
     def checkStatus(self):
         '''Checks the status bytes of every VXI device to see if any are in an error state'''
         for dev in [self.Vmeter, self.Imeter, self.DA, self.Relay]:
@@ -480,14 +559,22 @@ class THW:
                 raise Exception("Device ", repr(dev), "returned failed test")
             print("OK!")
     
+    def runBridgeWireTest(self, current, balancevoltage):
+        self.DA.write("VOLT3 "+str(balancevoltage))
+        self.DA.query("*OPC?")
+        self.runSingleWireTest(current, MuxChannels.WS_BRIDGE)
+        self.DA.write("VOLT3 DEF")
+        self.DA.query("*OPC?")
+    
     def runSingleWireTest(self, current, sensechan):
+        self.Relay.write("*RST")
         self.Relay.twowire(sensechan)
 
         self.DA.write("CURR2 "+str(current))  # Disable the current again
 
         self.Vmeter.write("*RST") # Reset to power-on configuration again
         self.Vmeter.write("CAL:LFR 50")  #Set the line frequenc
-        self.Vmeter.write("CONF:VOLT:DC 1, MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
+        self.Vmeter.write("CONF:VOLT:DC 0.125, MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
         self.Vmeter.write("CAL:ZERO:AUTO OFF") #Disable auto zero
         self.Vmeter.write("SAMP:COUN 5000") #Take 500 samples
         self.Vmeter.write("SAMP:SOUR TIM") #Use the internal timer to drive the sampling
@@ -500,8 +587,9 @@ class THW:
         
         VMtime = []
         IMtime = []
-        print("Sleeping 1 second to let the DA output stabilise")
-        time.sleep(1)
+        print("Waiting for completion of setup")
+        self.Relay.query("*OPC?") #Ensure channel change is complete
+        self.DA.query("*OPC?") #Ensure voltage change is complete
         print("Triggering the run")
         #Clear out what's been sent by the teensy already
         with serial.Serial('com4', 9600, timeout=2) as self.ser:
@@ -515,7 +603,7 @@ class THW:
             print("Gathering Meter Data...")
             Vquery = self.Vmeter.query("FETC?")
             Iquery = self.Imeter.query("FETC?")
-            voltage = -np.array(list(map(float, Vquery.split(','))))
+            voltage = np.array(list(map(float, Vquery.split(','))))
             current = np.array(list(map(float, Iquery.split(','))))
             self.Relay.write("*RST")
             print("Meters Queried.")
@@ -594,8 +682,19 @@ class THW:
         writeArray("current.csv", current)
         writeArray("voltage.csv", voltage)
 
-        print("Writing to files Completed... plotting")
-
+        print("Writing to files completed... plotting")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+             
         if True:
             fig = plt.figure()
             ax1 = fig.add_subplot(1, 2, 1)
@@ -613,6 +712,7 @@ class THW:
             ax.plot([PowerTimeStart, PowerTimeStart], [0, 3], 'r', lw=1)
 
             ax1.plot(VMtime, voltage, marker="o", linestyle="", markersize=1)
+            #ax1.set_ylim(0.23,0.25)
             ax2.plot(IMtime, current, marker="o", linestyle="", markersize=1)
 
             ax.set_yticklabels([])
