@@ -10,16 +10,42 @@ from visa import VisaIOError
 import serial
 import time
 import math
-from scipy.optimize import fsolve
 import numpy as np
 import matplotlib.pyplot as plt
 import serial.tools.list_ports
 from matplotlib.lines import Line2D
-import matplotlib.animation as animation
-from scipy.optimize import fsolve
-
 
 gpib = 0
+
+#Our probe is this
+#https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
+#1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
+#This means the alpha is 0.00385 
+#Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
+#We can use the Callendar-Van Dusen expression to calculate T
+#
+# Here's a definition via the ITS-90 versus the IPTS-68
+#http://www.code10.info/index.php%3Foption%3Dcom_content%26view%3Darticle%26id%3D82:measuring-temperature-platinum-resistance-thermometers%26catid%3D60:temperature%26Itemid%3D83
+def RTD_RtoT(R, R0=100):
+    A = 3.9083E-3
+    B = -5.775E-7
+    #C = -4.183E-12
+    Temp = (-R0 * A + math.sqrt(R0**2 * A**2 - 4 * R0 * B * (R0 - R)))  / (2 * R0 * B)
+    return Temp
+
+#Our wire lengths are 89.50mm and 60.50mm from pad end to pad end, and 0.015mm diameter
+#Short and Long resistances per length should be within 2% (pg 463 NIST THW)
+#Calculations for platinum with a resistivity of 10.6e-8 Ohm m, and diameter 0.015mm
+#Gives 53.685438 Ohm for 8.95cm and 36.2901564 Ohm for 6.05cm        
+
+# Measured in-place wire resistances are 56.3028 and 38.1656 with contact/lead resistance of 0.006, but much more variance in readings than that
+def Long_HW_RtoT(R):
+    Rpt =  1.9192360733223648 * R + 0.6772834578915337
+    return RTD_RtoT(Rpt)
+
+def Short_HW_RtoT(R):
+    Rpt =  2.811359007746365 * R + 1.6831528533284796
+    return RTD_RtoT(Rpt)
 
 class Instrument():
     '''This class adds automatic error checking to pyvisa write/query commands and also adds some common VXI/SCPI commands as class methods.'''
@@ -108,8 +134,8 @@ class MuxChannels(Enum):
     THERMISTOR_4 = 9 #10K Thermistor
     THERMISTOR_3 = 10
     THERMISTOR_POWER = 11
-    #THERMISTOR_5 = 12
-    BRIDGE_DA = 12
+    THERMISTOR_5 = 12
+    #BRIDGE_DA = 12
     THERMISTOR_1 = 13
     THERMISTOR_2 = 14
     RTD_POWER = 15
@@ -119,6 +145,7 @@ def driveChannels():
             MuxChannels.CURRENT_RESISTOR : MuxChannels.WSB_POWER,
             MuxChannels.SHORT_WIRE : MuxChannels.WSB_POWER,
             MuxChannels.WS_BRIDGE : MuxChannels.WSB_POWER,
+            MuxChannels.WSB_POWER : MuxChannels.WSB_POWER,
             MuxChannels.LONG_WIRE : MuxChannels.WSB_POWER,
             MuxChannels.POTENTIOMETER_1 : MuxChannels.WSB_POWER,
             MuxChannels.POTENTIOMETER_2 : MuxChannels.WSB_POWER,
@@ -126,7 +153,7 @@ def driveChannels():
             MuxChannels.THERMISTOR_2 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_3 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_4 : MuxChannels.THERMISTOR_POWER,
-            #MuxChannels.THERMISTOR_5 : MuxChannels.THERMISTOR_POWER,
+            MuxChannels.THERMISTOR_5 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.THERMISTOR_6 : MuxChannels.THERMISTOR_POWER,
             MuxChannels.RTD_SENSE : MuxChannels.RTD_POWER,
             }
@@ -174,10 +201,16 @@ class RelayMux(Instrument):
 
         return self.twowire_channels(sense)+[100+drive.value, 191] #191 is the BT Tree switch
     
+    def fake_fourwire(self, sense):
+        self.twowire(sense)
+        self.closeRelays([191,192]) #Link the A and B trees, and connect the drive lines to the B tree
+
     def twowire(self, sense):
+        self.write("*RST")
         self.closeRelays(self.twowire_channels(sense))        
         
     def fourwire(self, sense):
+        self.write("*RST")
         self.closeRelays(self.fourwire_channels(sense))
         
 class THW:
@@ -264,9 +297,9 @@ class THW:
             if full_test:
                 self.verifyDA_current(2)
             self.checkStatus()
-            self.calibrateDA_voltage(3,MuxChannels.BRIDGE_DA)
-            if full_test:
-                self.verifyDA_voltage(3,MuxChannels.BRIDGE_DA)
+            #self.calibrateDA_voltage(3,MuxChannels.BRIDGE_DA)
+            #if full_test:
+            #    self.verifyDA_voltage(3,MuxChannels.BRIDGE_DA)
             self.checkStatus()
         
         
@@ -278,39 +311,36 @@ class THW:
             if not 99.5 < R < 100.5:
                 raise Exception("RCurrent is out of bounds")
             print("OK!")
-        #CHECK THE LONG WIRE IS 56.29
-        #SHORT WIRE
-    
-    
-    def ReadSenseR(self):
-        with serial.Serial('com4', 9600, timeout=2) as self.ser:
-            #Switch the wire on instead of the dummy load
-            self.IMeterSlowConf()
-            self.ser.write(b'4')
-            self.DA.write("CURR2 0.0") #Put 0mA through the wires
-            self.Relay.write("CLOS (@100,190)")
-
-            self.Vmeter.write("*RST")
-            self.Vmeter.write("*RCL 0")
-            self.Vmeter.write("CAL:ZERO:AUTO ON")
-            self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
-            self.Relay.query("*OPC?") #Ensure channel change is complete
-            self.DA.query("*OPC?") #Ensure voltage change is complete
-            I0 = float(self.Imeter.query("READ?").strip())
-            V0=float(self.Vmeter.query("READ?"))
-            print("Voffset=",V0,"Icurr=",I0)
-            self.DA.write("CURR2 0.001") #Put 1mA through the wires
-            self.Relay.query("*OPC?") #Ensure channel change is complete
-            self.DA.query("*OPC?") #Ensure voltage change is complete
-            IR = float(self.Imeter.query("READ?").strip())
-            VR=float(self.Vmeter.query("READ?"))
-            print("Vcurr=",VR,"Icurr=",IR)
-            print("R=",(VR-V0)/(IR-I0))
-            self.Relay.write("*RST")
-            self.ser.write(b'0')
-
-        self.checkStatus()
+            
+        self.LongNormal = 53.685438
+        self.ShortNormal = 36.2901564
         
+        print("Checking RTD connection...", end="")
+        if  not 100 < self.FourWire(MuxChannels.RTD_SENSE) < 115:
+            print("!!! RTD is out of range")
+        else:
+            print("OK")
+            
+        print("Checking short wire...", end="")
+        Rshort = self.FourWire(MuxChannels.SHORT_WIRE)
+        if not 0.95 * self.ShortNormal < Rshort < 1.05 * self.ShortNormal:
+            print("!!! Short wire is out of range",Rshort)
+        else:
+            print("OK -> ", Rshort)
+        
+        print("Checking long wire...", end="")
+        Rlong = self.FourWire(MuxChannels.LONG_WIRE)
+        if not 0.95 * self.LongNormal < Rlong < 1.05 * self.LongNormal:
+           print("!!! Long wire is out of range",Rlong)
+        else:
+           print("OK -> ", Rlong)
+        
+        #Rpot1 = self.FourWire(MuxChannels.POTENTIOMETER_1)
+        #print("R_pot1 =", Rpot1)
+        #Rpot2 = self.FourWire(MuxChannels.POTENTIOMETER_2)
+        #print("R_pot2 =", Rpot2)
+    
+
     def Temptest(self, logging=False):
         # Thermistor 1, 2, 3, 5,6 is  TFPT0805L1201FV TFPT0805 Linear 120x10^1=1200 Ohm ?F=+-1% V #Lead-free 1000pcs
         # Thermistor 4 is TFPT1206L1002FV TFPT1206 Linear 100*10^2=10k Ohm ?F=+-1% V #Lead-free 1000pcs
@@ -335,48 +365,17 @@ class THW:
                 return 0.04
             else:
                 raise Exception("Out of range")
-        
-        #Our probe is this
-        #https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
-        #1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
-        #This means the alpha is 0.00385 
-        #Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
-        #We can use the Callendar-Van Dusen expression to calculate T
-        #
-        # Here's a definition via the ITS-90 versus the IPTS-68
-        #http://www.code10.info/index.php%3Foption%3Dcom_content%26view%3Darticle%26id%3D82:measuring-temperature-platinum-resistance-thermometers%26catid%3D60:temperature%26Itemid%3D83
-        def RTD_RtoT(R, R0=100):
-            A = 3.9083E-3
-            B = -5.775E-7
-            C = -4.183E-12
-            Temp = (-R0 * A + math.sqrt(R0**2 * A**2 - 4 * R0 * B * (R0 - R)))  / (2 * R0 * B)
-            return Temp
-        
-        #Our wire lengths are 89.50mm and 60.50mm from pad end to pad end, and 0.015mm diameter
-        #Short and Long resistances per length should be within 2% (pg 463 NIST THW)
-        #More callendar-Van Dusen equations
-        def Long_HW_Solve(Temp, Res):
-            C_l = 5.719122779371328e-05
-            B_l = 0.2005214939916926
-            A_l = 52.235976794620974
-            return (A_l + (B_l*Temp) + (C_l*(Temp**2)))- Res
-        
-        def Short_HW_Solve(Temp, Res):
-            C_s = 2.861284460413907e-05
-            B_s = 0.1385312594407914811
-            A_s = 35.62074654189631
-            return (A_s + (B_s*Temp) + (C_s*(Temp**2))) - Res
 
         sources = [
-                (MuxChannels.THERMISTOR_1, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
-                (MuxChannels.THERMISTOR_2, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
-                (MuxChannels.THERMISTOR_3, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
-                (MuxChannels.THERMISTOR_4, lambda R : Thermistor_RtoT(R, Rref=10000.0)),
+                #(MuxChannels.THERMISTOR_1, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                #(MuxChannels.THERMISTOR_2, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                #(MuxChannels.THERMISTOR_3, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                #(MuxChannels.THERMISTOR_4, lambda R : Thermistor_RtoT(R, Rref=10000.0)),
                 #(MuxChannels.THERMISTOR_5, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
-                (MuxChannels.THERMISTOR_6, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
+                #(MuxChannels.THERMISTOR_6, lambda R : Thermistor_RtoT(R, Rref=1200.0)),
                 (MuxChannels.RTD_SENSE, RTD_RtoT),
-                (MuxChannels.SHORT_WIRE, lambda R : fsolve(lambda T : 35.62074654189631 + 0.1385312594407914811 * T + 2.861284460413907e-05 * T**2 - R, 0)[0]),
-                (MuxChannels.LONG_WIRE, lambda R :  fsolve(lambda T : 52.235976794620974 + 0.2005214939916926 * T + 5.719122779371328e-05 * T**2 - R, 0)[0])
+                (MuxChannels.SHORT_WIRE, Short_HW_RtoT),
+                (MuxChannels.LONG_WIRE, Long_HW_RtoT)
                 ]
         
         
@@ -397,25 +396,57 @@ class THW:
         while True:
             log = open("T.log", "a+")
             print(time.strftime("%X %x"), file=log, sep="", end=",")
+            print(time.strftime("%X %x"), sep="", end=",")
             for muxchan, RtoT in sources:
                 R = self.FourWire(muxchan)
                 print(repr(R),repr(RtoT(R)), file=log, sep=",", end=",")
-                if muxchan == MuxChannels.RTD_SENSE:
-                    print(time.strftime("%X %x"), sep="", end=",")
-                    print(repr(R), repr(RtoT(R)), sep=",")
+                print(repr(R), repr(RtoT(R)), sep=",", end=",")
+            print("")
             print("",file=log, sep="", end="\n")
             log.close()
 
         
-    def FourWire(self, muxchan):
-        self.Relay.fourwire(muxchan)
+    def FourWire(self, muxchan, fake=False, current=0.0001):
+        if fake:
+            self.Relay.fake_fourwire(muxchan)
+        else:
+            self.Relay.fourwire(muxchan)
+        
+        if driveChannels()[muxchan] == MuxChannels.WSB_POWER and not fake:
+            with serial.Serial('com4', 9600, timeout=2) as self.ser:
+                #Switch the wire on instead of the dummy load
+                self.IMeterSlowConf()
+                self.ser.write(b'4')
+                self.DA.write("CURR2 0.0") #Put 0mA through the wires
+                self.Relay.twowire(muxchan)
+                self.Vmeter.write("*RST")
+                self.Vmeter.write("*RCL 0")
+                self.Vmeter.write("CAL:ZERO:AUTO ON")
+                self.Vmeter.write("CONF:VOLT:DC AUTO,MIN")
+                self.Relay.query("*OPC?") #Ensure channel change is complete
+                self.DA.query("*OPC?") #Ensure voltage change is complete
+                self.Imeter.write("INIT")
+                self.Vmeter.write("INIT")
+                V0=float(self.Vmeter.query("FETCH?"))
+                I0=float(self.Imeter.query("FETCH?").strip())
+                #print("Voffset=",V0,"Icurr=",I0)
+                self.DA.write("CURR2 "+str(current)) #Put 1mA through the wires
+                self.Relay.query("*OPC?") #Ensure channel change is complete
+                self.DA.query("*OPC?") #Ensure voltage change is complete
+                self.Imeter.write("INIT")
+                self.Vmeter.write("INIT")
+                VR=float(self.Vmeter.query("FETCH?"))
+                IR=float(self.Imeter.query("FETCH?"))
+                #print("Vcurr=",VR,"Icurr=",IR)
+                self.ser.write(b'0')
+                return (VR-V0)/(IR-I0)           
+        
         self.Relay.query("*OPC?")
         # Load the four wire resistance measurement, add a delay for the meters and take the reading
         self.Vmeter.write("*RST")
         self.Vmeter.write("*RCL 0")
         Resistance = float(self.Vmeter.query("READ?"))
         self.checkStatus()
-        self.Relay.write("*RST")
         return Resistance
 
     def IMeterSlowConf(self):
@@ -513,7 +544,6 @@ class THW:
         #Tell the DA the values so it can internally calibrate
         self.DA.write("CAL"+channel+":VOLT "+minval+","+zeroval+","+maxval)
         self.DA.write("CAL"+channel+":STAT ON") #Enable calibration
-        self.Relay.write("*RST")
         print("OK!")
         
     def verifyDA_voltage(self, channel, sense):
@@ -529,7 +559,6 @@ class THW:
         self.DA.write("VOLT"+channel+" MAX")  # Measure max value
         maxval = float(self.Vmeter.query("READ?").strip())
         self.DA.write("VOLT"+channel+" DEF")  # Disable the current again
-        self.Relay.write("*RST")
         #print("DA"+channel+" cal error (min%%,zero%%,max%%) (%0.3f%%,%0.3f%%,%0.3f%%)" % ((float(minval)/10.922+1)*100,float(zeroval)/10.922*100,(float(maxval)/10.922-1)*100))
         if abs(minval+10.922) > 0.0005*10.922+3.3e-3:
             raise Exception("DA Channel "+channel+" min value is out of spec!")
@@ -566,11 +595,19 @@ class THW:
         self.DA.write("VOLT3 DEF")
         self.DA.query("*OPC?")
     
-    def runSingleWireTest(self, current, sensechan):
-        self.Relay.write("*RST")
+    def runSingleWireTest(self, drivecurrent, sensechan):
+        RtoT = Long_HW_RtoT
+        if sensechan == MuxChannels.SHORT_WIRE:
+            RtoT = Short_HW_RtoT    
+
+        Rwire0 = self.FourWire(sensechan)
+        Twire0 = RtoT(Rwire0)
+        RRTD0 = self.FourWire(MuxChannels.RTD_SENSE)
+        TRTD0 = RTD_RtoT(RRTD0)
+        
         self.Relay.twowire(sensechan)
 
-        self.DA.write("CURR2 "+str(current))  # Disable the current again
+        self.DA.write("CURR2 "+str(drivecurrent))
 
         self.Vmeter.write("*RST") # Reset to power-on configuration again
         self.Vmeter.write("CAL:LFR 50")  #Set the line frequenc
@@ -582,7 +619,7 @@ class THW:
         self.Vmeter.write("TRIG:SOUR EXT")
         self.Vmeter.write("TRIG:SLOP NEG")
         self.Vmeter.write("INIT")
-        self.IMeterFastConf(current)
+        self.IMeterFastConf(drivecurrent)
         self.Imeter.write("INIT")
         
         VMtime = []
@@ -605,7 +642,6 @@ class THW:
             Iquery = self.Imeter.query("FETC?")
             voltage = np.array(list(map(float, Vquery.split(','))))
             current = np.array(list(map(float, Iquery.split(','))))
-            self.Relay.write("*RST")
             print("Meters Queried.")
         
             def readTeensy():
@@ -734,5 +770,33 @@ class THW:
             ax.legend(custom_lines, ['Power Time', 'IM Complete', 'VM\
  Complete'])
 
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            Twire = [RtoT(V/drivecurrent) for V in voltage]
+            ax.plot([PowerTimeStart, PowerTimeStart], [0, 1e3], '-g', lw=1)
+            ax.plot(VMtime, Twire, marker="o", linestyle="", markersize=1)
+            ax.plot([VMtime[0], VMtime[-1]], [Twire0,Twire0], "-r", label="Initial wire T", lw=1)
+            ax.plot([VMtime[0], VMtime[-1]], [TRTD0,TRTD0], "-b", label="Initial RTD T",lw=1)
+            ax.set_xlabel('Time (ms)')
+            ax.set_ylabel('T ${}^\circ$C')
+            ax.legend()
+            ax.set_ylim(0, max(Twire))
+            ax.set_xlim(VMtime[0], VMtime[-1])
+            
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)            
+            lnt = []
+            lnT = []
+            for t, T in zip(VMtime, Twire):
+                if t>PowerTimeStart:
+                    lnt.append(math.log(t-PowerTimeStart))
+                    lnT.append(T-Twire0)
+                    
+            ax.plot(lnt, lnT, marker="o", linestyle="", markersize=1)
+            ax.set_xlabel('Log time (ms)')
+            ax.set_ylabel('T ${}^\circ$C')
+            ax.set_ylim(0, max(lnT))
+            ax.set_xlim(lnt[0], lnt[-1])
+            ax.legend()
             plt.show()
         

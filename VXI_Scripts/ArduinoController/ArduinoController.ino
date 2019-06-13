@@ -11,16 +11,26 @@ enum State : uint8_t { STAND_BY = 1, IDLE_MODE, WIRE_ON, INIT, RUN, SEND_VDATA, 
 State THW = STAND_BY;
 
 char rx_byte;
-elapsedMicros Timer;
-const unsigned int PowerTimeStart = 1000; //1ms
-const unsigned int PowerTime = 1000000; //2s
-const unsigned int numReadings = 10000;
-unsigned int VMtime[numReadings];
-unsigned int IMtime[numReadings];
-unsigned int VMcounter;
-unsigned int IMcounter;
-volatile int VMTrigCheck = 0;
-volatile int IMTrigCheck = 0;
+
+//Microsecond times for events
+const unsigned long PowerTimeStart = 1000;
+const unsigned long PowerTime = 1000000;
+
+//Number of readings to take
+const unsigned long numReadings = 10000;
+
+unsigned long VMtime[numReadings];
+unsigned long IMtime[numReadings];
+unsigned long VMcounter;
+unsigned long IMcounter;
+
+volatile unsigned long runStartMicros;
+volatile int VMTrigCheck;
+volatile unsigned int VMTrigMicros;
+volatile int IMTrigCheck;
+volatile unsigned int IMTrigMicros;
+
+
 int PowerCheck = 0;
 
 float Voltage;
@@ -81,36 +91,36 @@ void loop() {
       IMTrigCheck = 0;
       VMcounter = 0;
       IMcounter = 0;
-      Timer = 0;
       THW = RUN;
+      runStartMicros = micros();
       //No break, just carry on with the run!
     case RUN: //Also running while in start mode.
-      if (Timer <= (PowerTime + PowerTimeStart)){
+    {
+      unsigned long currTime = micros() - runStartMicros;
+      if (currTime <= (PowerTime + PowerTimeStart)){
         digitalWrite(ReadTrig, LOW);
         digitalWrite(ledPin, LOW);
-        if (Timer >= PowerTimeStart){
+        if (currTime >= PowerTimeStart){
           digitalWrite(FET1, LOW);
           digitalWrite(Power, HIGH);
         }
-      } else if (Timer > (PowerTime + PowerTimeStart) && PowerCheck == 0){
-        Serial.println("Break");
+      } else if (currTime > (PowerTime + PowerTimeStart) && PowerCheck == 0){
         digitalWrite(Power, LOW);
         PowerCheck = 1;
+        Serial.println("Break");
       }
 
       if (VMTrigCheck == 1){
-        VMtime[VMcounter] = Timer;
+        VMtime[VMcounter++] = VMTrigMicros - runStartMicros;
         VMTrigCheck = 0;
-        VMcounter++;
       } 
 
       if (IMTrigCheck == 1){
-        IMtime[IMcounter] = Timer;
+        IMtime[IMcounter++] = IMTrigMicros - runStartMicros;
         IMTrigCheck = 0;
-        IMcounter++;
       } 
 
-      if (Timer > PowerTime){
+      if (currTime > PowerTime){
         THW = STAND_BY;
         Serial.println("PowerTimeStart");
         Serial.println(PowerTimeStart);
@@ -118,9 +128,8 @@ void loop() {
         Serial.println(PowerTime);
       }
       break;
+    }
     case SEND_VDATA:
-
-
       Serial.println("VMReadings");
       Serial.println(VMcounter);
 
@@ -149,10 +158,12 @@ void loop() {
 }
 
 void ISR_VMTrigTiming(){
+  VMTrigMicros = micros();
   VMTrigCheck = 1;
 }
 
 void ISR_IMTrigTiming(){
+  IMTrigMicros = micros();
   IMTrigCheck = 1;
 }
       //Pressure Transducer
