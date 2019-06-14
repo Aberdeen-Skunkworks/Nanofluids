@@ -17,36 +17,6 @@ from matplotlib.lines import Line2D
 
 gpib = 0
 
-#Our probe is this
-#https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
-#1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
-#This means the alpha is 0.00385 
-#Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
-#We can use the Callendar-Van Dusen expression to calculate T
-#
-# Here's a definition via the ITS-90 versus the IPTS-68
-#http://www.code10.info/index.php%3Foption%3Dcom_content%26view%3Darticle%26id%3D82:measuring-temperature-platinum-resistance-thermometers%26catid%3D60:temperature%26Itemid%3D83
-def RTD_RtoT(R, R0=100):
-    A = 3.9083E-3
-    B = -5.775E-7
-    #C = -4.183E-12
-    Temp = (-R0 * A + math.sqrt(R0**2 * A**2 - 4 * R0 * B * (R0 - R)))  / (2 * R0 * B)
-    return Temp
-
-#Our wire lengths are 89.50mm and 60.50mm from pad end to pad end, and 0.015mm diameter
-#Short and Long resistances per length should be within 2% (pg 463 NIST THW)
-#Calculations for platinum with a resistivity of 10.6e-8 Ohm m, and diameter 0.015mm
-#Gives 53.685438 Ohm for 8.95cm and 36.2901564 Ohm for 6.05cm        
-
-# Measured in-place wire resistances are 56.3028 and 38.1656 with contact/lead resistance of 0.006, but much more variance in readings than that
-def Long_HW_RtoT(R):
-    Rpt =  1.9192360733223648 * R + 0.6772834578915337
-    return RTD_RtoT(Rpt)
-
-def Short_HW_RtoT(R):
-    Rpt =  2.811359007746365 * R + 1.6831528533284796
-    return RTD_RtoT(Rpt)
-
 class Instrument():
     '''This class adds automatic error checking to pyvisa write/query commands and also adds some common VXI/SCPI commands as class methods.'''
     def __init__(self, name, rm, address, full_test, visa_timeout_time=5000, visa_chunk_size=102400, no_check_commands=[]):
@@ -305,6 +275,8 @@ class THW:
         
         #CHECK THE R CURRENT RESISTANCE NOW
         self.RCurrent = 99.95117
+        self.LongNormal = 53.685438
+        self.ShortNormal = 36.2901564
         if full_test:
             R = self.FourWire(MuxChannels.CURRENT_RESISTOR)
             print("Current resistor value:",R,"Ohm...", end="")
@@ -312,28 +284,25 @@ class THW:
                 raise Exception("RCurrent is out of bounds")
             print("OK!")
             
-        self.LongNormal = 53.685438
-        self.ShortNormal = 36.2901564
-        
-        print("Checking RTD connection...", end="")
-        if  not 100 < self.FourWire(MuxChannels.RTD_SENSE) < 115:
-            print("!!! RTD is out of range")
-        else:
-            print("OK")
+            print("Checking RTD connection...", end="")
+            if  not 100 < self.FourWire(MuxChannels.RTD_SENSE) < 115:
+                print("!!! RTD is out of range")
+            else:
+                print("OK")
             
-        print("Checking short wire...", end="")
-        Rshort = self.FourWire(MuxChannels.SHORT_WIRE)
-        if not 0.95 * self.ShortNormal < Rshort < 1.05 * self.ShortNormal:
-            print("!!! Short wire is out of range",Rshort)
-        else:
-            print("OK -> ", Rshort)
+            print("Checking short wire...", end="")
+            Rshort = self.FourWire(MuxChannels.SHORT_WIRE)
+            if not 0.95 * self.ShortNormal < Rshort < 1.05 * self.ShortNormal:
+                print("!!! Short wire is out of range",Rshort)
+            else:
+                print("OK -> ", Rshort)
         
-        print("Checking long wire...", end="")
-        Rlong = self.FourWire(MuxChannels.LONG_WIRE)
-        if not 0.95 * self.LongNormal < Rlong < 1.05 * self.LongNormal:
-           print("!!! Long wire is out of range",Rlong)
-        else:
-           print("OK -> ", Rlong)
+            print("Checking long wire...", end="")
+            Rlong = self.FourWire(MuxChannels.LONG_WIRE)
+            if not 0.95 * self.LongNormal < Rlong < 1.05 * self.LongNormal:
+                print("!!! Long wire is out of range",Rlong)
+            else:
+                print("OK -> ", Rlong)
         
         #Rpot1 = self.FourWire(MuxChannels.POTENTIOMETER_1)
         #print("R_pot1 =", Rpot1)
@@ -799,4 +768,33 @@ class THW:
             ax.set_xlim(lnt[0], lnt[-1])
             ax.legend()
             plt.show()
-        
+
+#Our probe is this
+#https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
+#1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
+#This means the alpha is 0.00385 
+#Following the notes at http://educypedia.karadimov.info/library/c15_136.pdf
+#We can use the Callendar-Van Dusen expression to calculate T
+#
+# Here's a definition via the ITS-90 versus the IPTS-68
+#http://www.code10.info/index.php%3Foption%3Dcom_content%26view%3Darticle%26id%3D82:measuring-temperature-platinum-resistance-thermometers%26catid%3D60:temperature%26Itemid%3D83
+def RTD_RtoT(R, R0=100):
+    A = 3.9083E-3
+    B = -5.775E-7
+    #C = -4.183E-12
+    Temp = (-R0 * A + math.sqrt(R0**2 * A**2 - 4 * R0 * B * (R0 - R)))  / (2 * R0 * B)
+    return Temp
+
+#Our wire lengths are 89.50mm and 60.50mm from pad end to pad end, and 0.015mm diameter
+#Short and Long resistances per length should be within 2% (pg 463 NIST THW)
+#Calculations for platinum with a resistivity of 10.6e-8 Ohm m, and diameter 0.015mm
+#Gives 53.685438 Ohm for 8.95cm and 36.2901564 Ohm for 6.05cm        
+
+# Measured in-place wire resistances are 56.3028 and 38.1656 with contact/lead resistance of 0.006, but much more variance in readings than that
+def Long_HW_RtoT(R):
+    Rpt =  1.9192360733223648 * R + 0.6772834578915337
+    return RTD_RtoT(Rpt)
+
+def Short_HW_RtoT(R):
+    Rpt =  2.811359007746365 * R + 1.6831528533284796
+    return RTD_RtoT(Rpt)
