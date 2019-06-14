@@ -564,10 +564,12 @@ class THW:
         self.DA.write("VOLT3 DEF")
         self.DA.query("*OPC?")
     
-    def runSingleWireTest(self, drivecurrent, sensechan):
+    def runSingleWireTest(self, drivecurrent, sensechan, plot=True):
         RtoT = Long_HW_RtoT
+        wireL = wire_length_long
         if sensechan == MuxChannels.SHORT_WIRE:
             RtoT = Short_HW_RtoT    
+            wireL = wire_length_short
 
         Rwire0 = self.FourWire(sensechan)
         Twire0 = RtoT(Rwire0)
@@ -700,7 +702,7 @@ class THW:
         print("######### ### FIX ZERO COMPENSATION!!!!!!")
         print("######### ### FIX ZERO COMPENSATION!!!!!!")
              
-        if True:
+        if plot:
             fig = plt.figure()
             ax1 = fig.add_subplot(1, 2, 1)
             ax2 = fig.add_subplot(2, 2, 4)
@@ -739,9 +741,11 @@ class THW:
             ax.legend(custom_lines, ['Power Time', 'IM Complete', 'VM\
  Complete'])
 
+
+        Twire = [RtoT(V/drivecurrent) for V in voltage]
+        if plot:
             fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            Twire = [RtoT(V/drivecurrent) for V in voltage]
+            ax = fig.add_subplot(1, 1, 1)            
             ax.plot([PowerTimeStart, PowerTimeStart], [0, 1e3], '-g', lw=1)
             ax.plot(VMtime, Twire, marker="o", linestyle="", markersize=1)
             ax.plot([VMtime[0], VMtime[-1]], [Twire0,Twire0], "-r", label="Initial wire T", lw=1)
@@ -751,24 +755,51 @@ class THW:
             ax.legend()
             ax.set_ylim(0, max(Twire))
             ax.set_xlim(VMtime[0], VMtime[-1])
-            
+        
+        filtered_t = []
+        filtered_deltaT = []
+        filtered_V = []
+        for t, V, T in zip(VMtime, voltage, Twire):
+            if t>PowerTimeStart:
+                filtered_t.append(t-PowerTimeStart)
+                filtered_deltaT.append(T-Twire0)
+                filtered_V.append(V)
+        filtered_lnt = [math.log(t) for t in filtered_t]                    
+        avgV = sum(filtered_V)/len(filtered_V)
+        q = avgV * drivecurrent / wireL
+        print("q =", q, "W/m")
+
+        if plot:
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)            
-            lnt = []
-            lnT = []
-            for t, T in zip(VMtime, Twire):
-                if t>PowerTimeStart:
-                    lnt.append(math.log(t-PowerTimeStart))
-                    lnT.append(T-Twire0)
-                    
-            ax.plot(lnt, lnT, marker="o", linestyle="", markersize=1)
+            ax.plot(filtered_lnt, filtered_deltaT, marker="o", linestyle="", markersize=1)
             ax.set_xlabel('Log time (ms)')
             ax.set_ylabel('T ${}^\circ$C')
-            ax.set_ylim(0, max(lnT))
-            ax.set_xlim(lnt[0], lnt[-1])
+            ax.set_ylim(0, max(filtered_deltaT))
+            ax.set_xlim(min(filtered_lnt), max(filtered_lnt))
             ax.legend()
             plt.show()
 
+        return filtered_t, filtered_lnt, filtered_deltaT, q, wireL
+
+
+    def fullprobe(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        plt.ion()
+        ax.set_ylabel("$4\\,\\pi\\Delta T/q$")
+        ax.set_xlabel("Log time (ms)")
+        ax.plot([0, 6], [0, 6 /26.02e-3], 'k-', zorder=10, label="Slope of $1/\\lambda_{air}$")
+        for current in [0.010, 0.0125, 0.015, 0.0175]:
+            t, lnt, dT, q, L = self.runSingleWireTest(current, MuxChannels.LONG_WIRE, plot=False)
+            ax.plot([t for t in lnt], [T * 4 * math.pi / q for T in dT], '.', label="$I="+str(1000*current)+"$mA")
+            ax.legend()
+            plt.draw()
+            ax.set_ylim(bottom=0)
+            ax.set_xlim(left=0)
+            plt.pause(0.0001)
+
+        plt.show()
 #Our probe is this
 #https://uk.rs-online.com/web/p/platinum-resistance-temperature-sensors/2364299/?relevancy-data=636F3D3126696E3D4931384E525353746F636B4E756D626572266C753D656E266D6D3D6D61746368616C6C26706D3D5E2828282872737C5253295B205D3F293F285C647B337D5B5C2D5C735D3F5C647B332C347D5B705061415D3F29297C283235285C647B387D7C5C647B317D5C2D5C647B377D2929292426706F3D3126736E3D592673723D2673743D52535F53544F434B5F4E554D4245522677633D4E4F4E45267573743D32333634323939267374613D3233363432393926&searchHistory=%7B%22enabled%22%3Atrue%7D
 #1/5th DIN PT100 +-0.06C at 0C (in accordance with IEC 751)
@@ -789,7 +820,8 @@ def RTD_RtoT(R, R0=100):
 #Short and Long resistances per length should be within 2% (pg 463 NIST THW)
 #Calculations for platinum with a resistivity of 10.6e-8 Ohm m, and diameter 0.015mm
 #Gives 53.685438 Ohm for 8.95cm and 36.2901564 Ohm for 6.05cm        
-
+wire_length_long = 0.0895 #m
+wire_length_short = 0.0605 #m
 # Measured in-place wire resistances are 56.3028 and 38.1656 with contact/lead resistance of 0.006, but much more variance in readings than that
 def Long_HW_RtoT(R):
     Rpt =  1.9192360733223648 * R + 0.6772834578915337
