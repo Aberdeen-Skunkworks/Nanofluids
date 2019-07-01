@@ -564,7 +564,7 @@ class THW:
         self.DA.write("VOLT3 DEF")
         self.DA.query("*OPC?")
     
-    def runSingleWireTest(self, drivecurrent, sensechan, plot=True):
+    def runSingleWireTest(self, drivecurrent, sensechan, plot=True, speed=0):
         RtoT = Long_HW_RtoT
         wireL = wire_length_long
         if sensechan == MuxChannels.SHORT_WIRE:
@@ -582,11 +582,31 @@ class THW:
 
         self.Vmeter.write("*RST") # Reset to power-on configuration again
         self.Vmeter.write("CAL:LFR 50")  #Set the line frequenc
-        self.Vmeter.write("CONF:VOLT:DC 0.125, MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
+        #NOTE THIS CONF MUST OCCUR BEFORE SAMPLE TIMER/ETC
+        Vwirepredicted = 0.91#Rwire0 * drivecurrent
+        #DC range 0.113 0.91 7.27 58.1 300V
+        self.Vmeter.write("CONF:VOLT:DC "+str(Vwirepredicted)+", MAX") #Fixed voltage range, max resolution (worst possible, but fastest)
         self.Vmeter.write("CAL:ZERO:AUTO OFF") #Disable auto zero
-        self.Vmeter.write("SAMP:COUN 5000") #Take 500 samples
+        
+        #These are the settings for max read rates at particular aperatures
+        #10uS->76uS, 100uS->0.32ms, 2.5ms->2,8ms, 16.7ms->16.9ms
+        aperature, sample_timer = [(0.000010, 0.000076), (0.000100, 0.000320), (0.0025, 0.0028)][speed]
+        sample_count= 2000
+        run_duration = sample_timer * sample_count
+        print("Estimated run time ", run_duration, "s")
+
+        #Set the read rate
+        self.Vmeter.write("VOLT:APER "+str(aperature))
+        #Wait for the relay change to finish
+        self.Relay.query("*OPC?") #Ensure channel change is complete
+        self.DA.query("*OPC?") #Ensure voltage change is complete, system is in steady state
+        Voffset = float(self.Vmeter.query("READ?"))
+        print("Offset voltage =", str(Voffset), "V")
+
+        #Sample source TIMER must be used for >15 readings a second
         self.Vmeter.write("SAMP:SOUR TIM") #Use the internal timer to drive the sampling
-        self.Vmeter.write("SAMP:TIM MIN")  #At the fastest timing possible (76us)
+        self.Vmeter.write("SAMP:TIM "+str(sample_timer))
+        self.Vmeter.write("SAMP:COUN "+str(sample_count))
         self.Vmeter.write("TRIG:SOUR EXT")
         self.Vmeter.write("TRIG:SLOP NEG")
         self.Vmeter.write("INIT")
@@ -595,25 +615,14 @@ class THW:
         
         VMtime = []
         IMtime = []
-        print("Waiting for completion of setup")
-        self.Relay.query("*OPC?") #Ensure channel change is complete
-        self.DA.query("*OPC?") #Ensure voltage change is complete
         print("Triggering the run")
         #Clear out what's been sent by the teensy already
-        with serial.Serial('com4', 9600, timeout=2) as self.ser:
+        with serial.Serial('com4', 9600, timeout=11) as self.ser:
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
             #below doesn't do anything
             #self.ser.set_buffer_size(rx_size = 128000, tx_size = 128000)
             self.ser.write(b'1')
-        
-            #We grab VXI data first, as it might run out of mainframe memory
-            print("Gathering Meter Data...")
-            Vquery = self.Vmeter.query("FETC?")
-            Iquery = self.Imeter.query("FETC?")
-            voltage = np.array(list(map(float, Vquery.split(','))))
-            current = np.array(list(map(float, Iquery.split(','))))
-            print("Meters Queried.")
         
             def readTeensy():
                 raw_result = self.ser.readline()
@@ -651,21 +660,25 @@ class THW:
             self.ser.write(b'2') #Request current readings
             readTeensyExpect("VMReadings")
             VMreadings = int(readTeensy())
-            print("VMReadings:", VMreadings)
-            print("Downloading...")
+            print("VMReadings:", VMreadings, "...", end="")
             readTeensyExpect("VMtime")
             VMtime = loadTeensyArray(VMreadings)
-            
+            print("OK!")
             print("Downloading current measurements")
             self.ser.write(b'5') #Request current readings
             readTeensyExpect("IMReadings")
             IMreadings = int(readTeensy())
-            print("IMReadings:", IMreadings)
-            print("Downloading...")
+            print("IMReadings:", IMreadings, "...", end="")
             readTeensyExpect("IMtime")
-            IMtime = loadTeensyArray(IMreadings)      
-            print("Teensy Data Recived and Sorted...")
-        
+            IMtime = loadTeensyArray(IMreadings)
+            print("OK!")
+            
+            print("Gathering Meter Data...", end="")
+            Vquery = self.Vmeter.query("FETC?")
+            Iquery = self.Imeter.query("FETC?")
+            voltage = np.array(list(map(lambda V: float(V)-Voffset, Vquery.split(','))))
+            current = np.array(list(map(float, Iquery.split(','))))
+            print("OK!")
 
         print("VM Time Array")
         print(len(VMtime))
@@ -682,25 +695,14 @@ class THW:
         print("Volt reading timing ", diffstats(VMtime))
         print("Current reading timing ", diffstats(IMtime))
 
+        print("Writing to files...", end="")
         def writeArray(filename, array):
             open(filename, "w").write(','.join(map(lambda x : repr(x), array)))
         writeArray("vtime.txt", VMtime)
         writeArray("itime.txt", IMtime)
         writeArray("current.csv", current)
         writeArray("voltage.csv", voltage)
-
-        print("Writing to files completed... plotting")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
-        print("######### ### FIX ZERO COMPENSATION!!!!!!")
+        print("OK!")
              
         if plot:
             fig = plt.figure()
@@ -741,11 +743,11 @@ class THW:
             ax.legend(custom_lines, ['Power Time', 'IM Complete', 'VM\
  Complete'])
 
-
         Twire = [RtoT(V/drivecurrent) for V in voltage]
         if plot:
             fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)            
+            ax = fig.add_subplot(1, 1, 1)
+            ax.set_title("Wire temperature")
             ax.plot([PowerTimeStart, PowerTimeStart], [0, 1e3], '-g', lw=1)
             ax.plot(VMtime, Twire, marker="o", linestyle="", markersize=1)
             ax.plot([VMtime[0], VMtime[-1]], [Twire0,Twire0], "-r", label="Initial wire T", lw=1)
@@ -765,13 +767,17 @@ class THW:
                 filtered_deltaT.append(T-Twire0)
                 filtered_V.append(V)
         filtered_lnt = [math.log(t) for t in filtered_t]                    
-        avgV = sum(filtered_V)/len(filtered_V)
+        avgV = sum(filtered_V) / len(filtered_V)
         q = avgV * drivecurrent / wireL
+        print("Wire L =", wireL, "m")
+        print("drive current =", drivecurrent*1000, "mA")
+        print("Vavg =", avgV,"V")
         print("q =", q, "W/m")
 
         if plot:
             fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)            
+            ax = fig.add_subplot(1, 1, 1)
+            ax.set_title("Wire temperature")
             ax.plot(filtered_lnt, filtered_deltaT, marker="o", linestyle="", markersize=1)
             ax.set_xlabel('Log time (ms)')
             ax.set_ylabel('T ${}^\circ$C')

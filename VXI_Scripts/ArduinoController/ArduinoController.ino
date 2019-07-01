@@ -14,7 +14,7 @@ char rx_byte;
 
 //Microsecond times for events
 const unsigned long PowerTimeStart = 1000;
-const unsigned long PowerTime = 1000000;
+const unsigned long PowerTime = 10000000;
 
 //Number of readings to take
 const unsigned long numReadings = 10000;
